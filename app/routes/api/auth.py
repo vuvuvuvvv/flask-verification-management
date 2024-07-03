@@ -9,7 +9,7 @@ from flask_jwt_extended import get_jwt_identity, jwt_required, get_jwt
 from app.models import TokenBlacklist
 from app import db
 from app.models import User
-from app.utils import clean_up_blacklist
+from app.utils.jwt_helpers import clean_up_blacklist
 from app import login_manager
 
 from datetime import timedelta
