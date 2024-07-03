@@ -42,7 +42,7 @@ def register():
     db.session.commit()
     
     login_user(new_user)
-    access_token = create_access_token(identity={"username": username, "role": new_user.role}, expires_delta=timedelta(seconds=10))
+    access_token = create_access_token(identity={"username": username, "role": new_user.role}, expires_delta=timedelta(minutes=15))
     refresh_token = create_refresh_token(identity={"username": username, "role": new_user.role}, expires_delta=timedelta(days=7))
     return jsonify(access_token=access_token, refresh_token=refresh_token), 200
 
@@ -55,7 +55,7 @@ def login():
     user = User.query.filter_by(username=username).first()
     if user and user.check_password(password):
         login_user(user)
-        access_token = create_access_token(identity={"username": username, "role": user.role}, expires_delta=timedelta(seconds=10))
+        access_token = create_access_token(identity={"username": username, "role": user.role}, expires_delta=timedelta(minutes=15))
         refresh_token = create_refresh_token(identity={"username": username, "role": user.role}, expires_delta=timedelta(days=7))
         return jsonify(
             access_token=access_token, 
