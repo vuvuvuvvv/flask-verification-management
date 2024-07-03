@@ -3,13 +3,12 @@ from flask import Flask
 from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
 from flask_login import LoginManager
-from app.config import Config
+from config import Config
 from flask_cors import CORS
 from flask_jwt_extended import JWTManager
+from app.utils.jwt_helpers import check_if_token_in_blacklist
 
-db = SQLAlchemy()
-migrate = Migrate()
-login_manager = LoginManager()
+from app.extensions import *
 
 def create_app(config_class=Config):
     app = Flask(__name__)
@@ -17,6 +16,7 @@ def create_app(config_class=Config):
     
     CORS(app, supports_credentials=True, resources={r"/*": {"origins": os.getenv("CLIENT_BASE_URL")}})
     jwt = JWTManager(app)
+    jwt.token_in_blocklist_loader(check_if_token_in_blacklist)
 
     db.init_app(app)
     migrate.init_app(app, db)
