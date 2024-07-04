@@ -8,3 +8,6 @@ class Config:
     JWT_TOKEN_LOCATION = ['headers']
     JWT_HEADER_NAME = 'Authorization'
     JWT_HEADER_TYPE = 'Bearer'
+
+    # SESSION_COOKIE_SAMESITE="None",
+    # SESSION_COOKIE_SECURE=False
