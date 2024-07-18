@@ -41,7 +41,7 @@ def register():
     session['current_user'] = new_user.to_dict()
 
     access_token = create_access_token(identity=new_user.to_dict(), expires_delta=timedelta(minutes=30))
-    refresh_token = create_refresh_token(identity=new_user.to_dict(), expires_delta=timedelta(days=7))
+    refresh_token = create_refresh_token(identity=new_user.to_dict(), expires_delta=timedelta(days=3))
     return jsonify(
         access_token=access_token, 
         refresh_token=refresh_token,
@@ -60,7 +60,7 @@ def login():
         login_user(user)
         session['current_user'] = user.to_dict()
         access_token = create_access_token(identity=user.to_dict(), expires_delta=timedelta(minutes=30))
-        refresh_token = create_refresh_token(identity=user.to_dict(), expires_delta=timedelta(days=7))
+        refresh_token = create_refresh_token(identity=user.to_dict(), expires_delta=timedelta(days=3))
         return jsonify(
             access_token=access_token, 
             refresh_token=refresh_token,
@@ -83,7 +83,10 @@ def refresh():
 # @login_required
 @jwt_required()
 def logout():
-    # print(current_user.name)
+    # Get the IP address of the request
+    # ip_address = request.remote_addr
+    # print(f"Request IP address: {ip_address}")
+
     try:
         logout_user()
         clean_up_blacklist()
@@ -137,7 +140,7 @@ def reset_email():
     db.session.commit()
 
     access_token = create_access_token(identity=user.to_dict(), expires_delta=timedelta(minutes=30))
-    refresh_token = create_refresh_token(identity=user.to_dict(), expires_delta=timedelta(days=7))
+    refresh_token = create_refresh_token(identity=user.to_dict(), expires_delta=timedelta(days=3))
     return jsonify(
         access_token=access_token, 
         refresh_token=refresh_token,
@@ -168,7 +171,7 @@ def reset_password():
     db.session.commit()
 
     access_token = create_access_token(identity=user.to_dict(), expires_delta=timedelta(minutes=30))
-    refresh_token = create_refresh_token(identity=user.to_dict(), expires_delta=timedelta(days=7))
+    refresh_token = create_refresh_token(identity=user.to_dict(), expires_delta=timedelta(days=3))
     return jsonify(
         access_token=access_token, 
         refresh_token=refresh_token,
