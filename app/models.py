@@ -4,6 +4,7 @@ from flask_login import UserMixin
 from datetime import datetime
 
 class User(UserMixin, db.Model):
+    __tablename__ = 'user'
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(64), index=True, unique=True, nullable=False)
     fullname = db.Column(db.String(100), index=True, nullable=False, default="404 Notfound")
@@ -33,6 +34,7 @@ class User(UserMixin, db.Model):
         }
 
 class TokenBlacklist(db.Model):
+    __tablename__ = 'token_blacklist'
     id = db.Column(db.Integer, primary_key=True)
     jti = db.Column(db.String(36), nullable=False, unique=True)
     created_at = db.Column(db.DateTime, nullable=False, default=datetime.now)
