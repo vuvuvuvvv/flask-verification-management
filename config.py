@@ -11,3 +11,11 @@ class Config:
 
     # SESSION_COOKIE_SAMESITE="None",
     # SESSION_COOKIE_SECURE=False
+
+    MAIL_SERVER = 'smtp.gmail.com'
+    MAIL_PORT = 587
+    MAIL_USE_TLS = True
+    MAIL_USE_SSL = False
+    MAIL_USERNAME = os.environ.get('MAIL_USERNAME')
+    MAIL_PASSWORD = os.environ.get('MAIL_PASSWORD')
+    

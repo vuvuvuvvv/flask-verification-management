@@ -27,8 +27,6 @@ def load_user_from_request(request):
 @main_bp.route('/profile', methods=['GET'])
 def profile_view():
 
-    print(current_user.username)
-
     if "current_user" in session:
         user = session['current_user']
     else:
