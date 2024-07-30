@@ -22,6 +22,7 @@ def create_app(config_class=Config):
     db.init_app(app)
     migrate.init_app(app, db)
     login_manager.init_app(app)
+    mail.init_app(app)
 
     from app.models import User, TokenBlacklist  # Import models here
 
