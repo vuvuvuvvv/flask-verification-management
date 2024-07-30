@@ -112,7 +112,7 @@ def profile():
 
     return jsonify(user.to_dict()), 200
 
-@auth_bp.route('/reset/email', methods=['POST'])
+@auth_bp.route('/change/email', methods=['POST'])
 @jwt_required()
 def reset_email():
     data = request.get_json()
@@ -148,7 +148,7 @@ def reset_email():
         msg= "Đổi email thành công!"
     ), 200
 
-@auth_bp.route('/reset/password', methods=['POST'])
+@auth_bp.route('/change/password', methods=['POST'])
 @jwt_required()
 def reset_password():
     data = request.get_json()
