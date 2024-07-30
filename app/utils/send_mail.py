@@ -20,7 +20,7 @@ def send_reset_password_email(email):
         sender= (os.environ.get('SENDER_NAME'), os.environ.get('SENDER_MAIL')),  
         recipients=[email]
     )
-    token = create_access_token(identity=email, expires_delta=timedelta(minutes=3))
+    token = create_access_token(identity={"email":email}, expires_delta=timedelta(minutes=5))
 
     reset_link = f"{os.environ.get('CLIENT_BASE_URL')}/reset-password/{token}"
 

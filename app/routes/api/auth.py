@@ -153,24 +153,29 @@ def profile():
     #     print("none")
 
     try:
-        username=current_user.username
+        username = current_user.username
         user = User.query.filter_by(username=username).first()
         if not user:
             return jsonify({"msg": "Không tìm thấy người dùng!"}), 404
         return jsonify(user.to_dict()), 200
     except Exception as err:
         print("err: ", err)
-    return jsonify({"msg":"Yêu cầu đăng nhập để thực hiện chức năng!"}), 200
+    return jsonify({"msg": "Yêu cầu đăng nhập để thực hiện chức năng!"}), 200
 
 
-
-@auth_bp.route("/send-mail", methods=["GET"])
+@auth_bp.route("/send-password-reset-token", methods=["POST"])
 def send_mail():
-    try:
-        send_reset_password_email("nguyenvu260502@gmail.com")
-        return jsonify("test mail oke"), 200
-    except Exception as mail_err:
-        print("Mail err: ", mail_err)
+    data = request.get_json()
+    email = data.get("email")
+    user = User.query.filter_by(email=email).first()
+    if not user:
+        return jsonify({"msg": "Email không tồn tại!", "status": 404}), 404
+    else: 
+        try:
+            send_reset_password_email(email)
+            return jsonify({"msg": "Gửi email thành công!", "status": 200}), 200
+        except Exception as mail_err:
+            return jsonify({"msg": f"Đã có lỗi xảy ra!: {mail_err}", "status": 500}), 500
 
 
 @auth_bp.route("/change/email", methods=["POST"])
@@ -216,22 +221,24 @@ def reset_email():
         200,
     )
 
-@auth_bp.route('/change/password', methods=['POST'])
+
+@auth_bp.route("/reset/password", methods=["POST"])
 @jwt_required()
 def reset_password():
     data = request.get_json()
     new_password = data.get("new_password")
     old_password = data.get("old_password")
 
-    # get user from jwt
-    current_user_identity = get_jwt_identity()
-    print(current_user_identity)
-    user = User.query.filter_by(username=current_user_identity["username"]).first()
+    # get email from jwt
+    print(get_jwt_identity())
+    email = get_jwt_identity()["email"]
+
+    user = User.query.filter_by(email=email).first()
     if not user:
         return jsonify({"msg": "Không tìm thấy người dùng!"}), 404
 
     # check current password
-    if not user.check_password(old_password):
+    if old_password and not user.check_password(old_password):
         return jsonify({"msg": "Mật khẩu không chính xác!"}), 401
 
     # set new password
