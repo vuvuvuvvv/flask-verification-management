@@ -3,7 +3,7 @@ pipline {
     stages {
         stage('Clone') {
             steps {
-                git credentialsId: 'github-credential', url: 'https://github.com/vuvuvuvvv/flask-verification-management.git'
+                git branch: 'dev', credentialsId: 'github-credential', url: 'https://github.com/vuvuvuvvv/flask-verification-management.git'
             }
         }
         stage('Push Docker Hub') {
