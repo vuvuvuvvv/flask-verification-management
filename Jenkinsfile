@@ -15,6 +15,7 @@ pipeline {
             steps {
                 echo 'Checking Docker...'
                 sh 'docker --version'
+                sh 'docker info'
             }
         }
         stage('Build Docker Image') {
@@ -39,6 +40,7 @@ pipeline {
         }
     }
 }
+
 
 
 
