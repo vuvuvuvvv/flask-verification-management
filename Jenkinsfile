@@ -15,6 +15,8 @@ pipeline {
             steps {
                 echo 'Checking Docker...'
                 sh 'docker --version'
+                sh 'sudo systemctl status docker'
+                sh 'ls -l /var/run/docker.sock'
                 sh 'docker info'
             }
         }
