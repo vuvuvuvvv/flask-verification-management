@@ -26,15 +26,24 @@ WORKDIR /app
 # Copy the dependencies from the build stage
 COPY --from=base /app /app
 
-# Copy db-wait.sh vào thư mục gốc của container
-COPY db-wait.sh /db-wait.sh
-RUN chmod +x /db-wait.sh
-
 # Set the FLASK_APP environment variable
 ENV FLASK_APP=manage:app
 
 # Define the command to run the application
-CMD ["sh", "-c", "/db-wait.sh postgres && flask db upgrade && python seed/seed.py && python manage.py run"]
+CMD ["sh", "-c", " \
+  until pg_isready -h postgres; do \
+    >&2 echo 'Postgres is unavailable - sleeping'; \
+    sleep 1; \      
+  done; \
+  >&2 echo 'Postgres is up - executing command'; \
+  heads=$(flask db heads | tr -d '[],' | tr -s ' ' | sed 's/ (head)//g'); \
+  echo 'Heads: ' $heads; \
+  if [ $(echo $heads | wc -w) -gt 1 ]; then \
+    flask db merge -m 'merge heads' $heads; \
+  fi; \
+  flask db history; \
+  flask db upgrade && python seed/seed.py && python manage.py run \
+"]
 
 # Expose the port the app runs on
 EXPOSE 5000
