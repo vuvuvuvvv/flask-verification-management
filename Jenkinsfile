@@ -9,9 +9,8 @@ pipeline {
         stage('Push Docker Hub') {
             steps {
                 withDockerRegistry(credentialsId: 'dockerhub-credential', url: "") {
-                    // some block
-                    sh label: '', script 'docker build -t vuvuvuvvv/dhtverificationmanagement-flask:latest .'
-                    sh label: '', script 'docker push vuvuvuvvv/dhtverificationmanagement-flask:latest .'
+                    sh 'docker build -t vuvuvuvvv/dhtverificationmanagement-flask:latest .'
+                    sh 'docker push vuvuvuvvv/dhtverificationmanagement-flask:latest'
                 }
             }
         }
