@@ -1,5 +1,9 @@
 pipeline {
     agent any
+    environment {
+        dockerHome = tool name: '404Docker', type: 'org.jenkinsci.plugins.docker.commons.tools.DockerTool'
+        PATH = "${dockerHome}/bin:${env.PATH}"
+    }
     stages {
         stage('Clone') {
             steps {
