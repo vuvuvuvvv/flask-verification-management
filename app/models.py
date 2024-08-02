@@ -4,11 +4,19 @@ from flask_login import UserMixin
 from datetime import datetime
 
 class User(UserMixin, db.Model):
+    __tablename__ = 'user'
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(64), index=True, unique=True, nullable=False)
+    fullname = db.Column(db.String(100), index=True, nullable=False, default="404 Notfound")
     email = db.Column(db.String(120), index=True, unique=True, nullable=False)
     password_hash = db.Column(db.String(256), nullable=False)
     role = db.Column(db.String(10), default="USER")
+
+    def set_email(self, email):
+        self.email = email
+
+    def set_fullname(self, fullname):
+        self.fullname = fullname
 
     def set_password(self, password):
         self.password_hash = generate_password_hash(password)
@@ -20,11 +28,13 @@ class User(UserMixin, db.Model):
         return {
             'id': self.id,
             'username': self.username,
+            'fullname': self.fullname,
             'email': self.email,
             'role': self.role
         }
 
 class TokenBlacklist(db.Model):
+    __tablename__ = 'token_blacklist'
     id = db.Column(db.Integer, primary_key=True)
     jti = db.Column(db.String(36), nullable=False, unique=True)
     created_at = db.Column(db.DateTime, nullable=False, default=datetime.now)

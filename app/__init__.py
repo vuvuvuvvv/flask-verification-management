@@ -7,6 +7,7 @@ from config import Config
 from flask_cors import CORS
 from flask_jwt_extended import JWTManager
 from app.utils.jwt_helpers import check_if_token_in_blacklist
+# from app.utils.import_sample_data import import_sample_users
 
 from app.extensions import *
 
@@ -21,13 +22,19 @@ def create_app(config_class=Config):
     db.init_app(app)
     migrate.init_app(app, db)
     login_manager.init_app(app)
+    mail.init_app(app)
 
     from app.models import User, TokenBlacklist  # Import models here
 
     from app.routes.api.auth import auth_bp
-    # from app.routes.main import main_bp
+    from app.routes.views import main_bp
 
     app.register_blueprint(auth_bp, url_prefix='/api/auth')
-    # app.register_blueprint(main_bp)
+    app.register_blueprint(main_bp)
+
+
+    # # Create sample user
+    # with app.app_context():
+    #     import_sample_users()
 
     return app
