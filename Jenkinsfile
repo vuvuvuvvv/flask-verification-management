@@ -17,17 +17,29 @@ pipeline {
                 sh 'docker --version'
             }
         }
+        stage('Build Docker Image') {
+            steps {
+                script {
+                    docker.withServer('unix:///var/run/docker.sock') {
+                        echo 'Building Docker image...'
+                        sh 'docker build -t vuvuvuvvv/dhtverificationmanagement-flask:latest .'
+                    }
+                }
+            }
+        }
         stage('Push Docker Hub') {
             steps {
-                echo 'Building and pushing Docker image...'
-                withDockerRegistry(credentialsId: 'dockerhub-credential', url: "") {
-                    sh 'docker build -t vuvuvuvvv/dhtverificationmanagement-flask:latest .'
-                    sh 'docker push vuvuvuvvv/dhtverificationmanagement-flask:latest'
+                script {
+                    docker.withRegistry('https://index.docker.io/v1/', 'dockerhub-credential') {
+                        echo 'Pushing Docker image...'
+                        sh 'docker push vuvuvuvvv/dhtverificationmanagement-flask:latest'
+                    }
                 }
             }
         }
     }
 }
+
 
 
 // pipeline {
