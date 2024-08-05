@@ -11,13 +11,6 @@ pipeline {
                 git branch: 'dev', credentialsId: 'github-credential', url: 'https://github.com/vuvuvuvvv/flask-verification-management.git'
             }
         }
-        // stage('Check Docker') {
-        //     steps {
-        //         echo 'Checking Docker...'
-        //         sh 'docker --version'
-        //         sh 'docker info'
-        //     }
-        // }
         stage('Docker Login') {
             steps {
                 script {
