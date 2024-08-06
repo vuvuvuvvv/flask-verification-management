@@ -12,7 +12,6 @@ from werkzeug.security import generate_password_hash
 from app import create_app, db
 import os
 
-
 def seed_data():
     try:
         app = create_app()
