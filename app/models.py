@@ -43,3 +43,43 @@ class TokenBlacklist(db.Model):
     def __init__(self, jti, expires_at):
         self.jti = jti
         self.expires_at = expires_at
+
+
+class PDM(db.Model):
+    __tablename__ = 'pdm'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    ma_tim_dong_ho_pdm = db.Column(db.String(255), nullable=True)
+    ten_dong_ho = db.Column(db.String(255), nullable=False)
+    noi_san_xuat = db.Column(db.String(255), nullable=False)
+    dn = db.Column(db.String(255), nullable=True)
+    ccx = db.Column(db.String(255), nullable=True)
+    kieu_sensor = db.Column(db.String(255), nullable=False)
+    transmitter = db.Column(db.String(255), nullable=True)
+    qn = db.Column(db.String(255), nullable=True)
+    q3 = db.Column(db.String(255), nullable=True)
+    r = db.Column(db.String(255), nullable=True)
+    don_vi_pdm = db.Column(db.String(255), nullable=False)
+    dia_chi = db.Column(db.String(255), nullable=True)
+    so_qd_pdm = db.Column(db.String(255), nullable=True)
+    ngay_qd_pdm = db.Column(db.DateTime, nullable=True)
+    ngay_het_han = db.Column(db.DateTime, nullable=True)
+    anh_pdm = db.Column(db.String(255), nullable=True)
+
+    def __init__(self, ma_tim_dong_ho_pdm, ten_dong_ho, noi_san_xuat, dn, ccx, kieu_sensor, transmitter, qn, q3, r, don_vi_pdm, dia_chi, so_qd_pdm, ngay_qd_pdm, ngay_het_han, anh_pdm):
+        self.ma_tim_dong_ho_pdm = ma_tim_dong_ho_pdm
+        self.ten_dong_ho = ten_dong_ho
+        self.noi_san_xuat = noi_san_xuat
+        self.dn = dn
+        self.ccx = ccx
+        self.kieu_sensor = kieu_sensor
+        self.transmitter = transmitter
+        self.qn = qn
+        self.q3 = q3
+        self.r = r
+        self.don_vi_pdm = don_vi_pdm
+        self.dia_chi = dia_chi
+        self.so_qd_pdm = so_qd_pdm
+        self.ngay_qd_pdm = ngay_qd_pdm
+        self.ngay_het_han = ngay_het_han
+        self.anh_pdm = anh_pdm
