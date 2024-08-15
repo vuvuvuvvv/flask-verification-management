@@ -69,6 +69,7 @@ def login():
     data = request.get_json()
     username = data.get("username")
     password = data.get("password")
+    remember = data.get("remember")
 
     # user = User.query.filter_by(username=username).first()
     # Check if the username is an email

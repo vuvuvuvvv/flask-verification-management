@@ -8,7 +8,27 @@ pdm_bp = Blueprint("pdm", __name__)
 @pdm_bp.route("/pdm", methods=["GET"])
 @jwt_required()
 def get_pdms():
-    pdms = PDM.query.all()
+    query = PDM.query
+
+    ma_tim_dong_ho_pdm = request.args.get('ma_tim_dong_ho_pdm')
+    if ma_tim_dong_ho_pdm:
+        query = query.filter(PDM.ma_tim_dong_ho_pdm == ma_tim_dong_ho_pdm)
+
+    so_qd_pdm = request.args.get('so_qd_pdm')
+    if so_qd_pdm:
+        query = query.filter(PDM.so_qd_pdm == so_qd_pdm)
+
+    ngay_qd_pdm_from = request.args.get('ngay_qd_pdm_from')
+    if ngay_qd_pdm_from:
+        query = query.filter(PDM.ngay_qd_pdm >= ngay_qd_pdm_from)
+
+    ngay_qd_pdm_to = request.args.get('ngay_qd_pdm_to')
+    if ngay_qd_pdm_to:
+        query = query.filter(PDM.ngay_qd_pdm <= ngay_qd_pdm_to)
+
+    pdms = query.all()
+
+
     result = [
         {
             "ma_tim_dong_ho_pdm": pdm.ma_tim_dong_ho_pdm,
