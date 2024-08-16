@@ -60,7 +60,7 @@ def register():
             user=new_user.to_dict(),
             msg="Đăng ký thành công!",
         ),
-        200,
+        201,
     )
 
 

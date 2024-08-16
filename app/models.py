@@ -83,3 +83,24 @@ class PDM(db.Model):
         self.ngay_qd_pdm = ngay_qd_pdm
         self.ngay_het_han = ngay_het_han
         self.anh_pdm = anh_pdm
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'ma_tim_dong_ho_pdm': self.ma_tim_dong_ho_pdm,
+            'ten_dong_ho': self.ten_dong_ho,
+            'noi_san_xuat': self.noi_san_xuat,
+            'dn': self.dn,
+            'ccx': self.ccx,
+            'kieu_sensor': self.kieu_sensor,
+            'transmitter': self.transmitter,
+            'qn': self.qn,
+            'q3': self.q3,
+            'r': self.r,
+            'don_vi_pdm': self.don_vi_pdm,
+            'dia_chi': self.dia_chi,
+            'so_qd_pdm': self.so_qd_pdm,
+            'ngay_qd_pdm': self.ngay_qd_pdm,
+            'ngay_het_han': self.ngay_het_han,
+            'anh_pdm': self.anh_pdm
+        }
