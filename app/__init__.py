@@ -26,7 +26,7 @@ def create_app(config_class=Config):
     from app.routes.views import main_bp
 
     app.register_blueprint(auth_bp, url_prefix='/api/auth')
-    app.register_blueprint(pdm_bp, url_prefix='/api')
+    app.register_blueprint(pdm_bp, url_prefix='/api/pdm')
     app.register_blueprint(main_bp)
 
     return app
