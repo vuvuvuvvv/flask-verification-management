@@ -104,3 +104,98 @@ class PDM(db.Model):
             'ngay_het_han': self.ngay_het_han,
             'anh_pdm': self.anh_pdm
         }
+
+
+class DongHo(db.Model):
+    __tablename__ = 'dongho'
+    
+    seri_number = db.Column(db.String(255), primary_key=True)  # Sử dụng seri_number làm khóa chính
+    phuong_tien_do = db.Column(db.String(255), nullable=True)
+    seri_chi_thi = db.Column(db.String(255), nullable=True)
+    seri_sensor = db.Column(db.String(255), nullable=True)
+    kieu_chi_thi = db.Column(db.String(255), nullable=True)
+    kieu_sensor = db.Column(db.String(255), nullable=True)
+    kieu_thiet_bi = db.Column(db.String(255), nullable=True)
+    co_so_san_xuat = db.Column(db.String(255), nullable=True)
+    so_tem = db.Column(db.String(255), nullable=True)
+    nam_san_xuat = db.Column(db.Date, nullable=True)
+    dn = db.Column(db.String(255), nullable=True)
+    d = db.Column(db.String(255), nullable=True)
+    ccx = db.Column(db.String(255), nullable=True)
+    q3 = db.Column(db.String(255), nullable=True)
+    r = db.Column(db.String(255), nullable=True)
+    qn = db.Column(db.String(255), nullable=True)
+    k_factor = db.Column(db.String(255), nullable=True)
+    so_qd_pdm = db.Column(db.String(255), nullable=True)
+    ten_khach_hang = db.Column(db.String(255), nullable=True)
+    co_so_su_dung = db.Column(db.String(255), nullable=True)
+    phuong_phap_thuc_hien = db.Column(db.String(255), nullable=True)
+    chuan_thiet_bi_su_dung = db.Column(db.String(255), nullable=True)
+    implementer = db.Column(db.String(255), nullable=True)
+    ngay_thuc_hien = db.Column(db.Date, nullable=True)
+    vi_tri = db.Column(db.String(255), nullable=True)
+    nhiet_do = db.Column(db.String(255), nullable=True)
+    do_am = db.Column(db.String(255), nullable=True)
+    du_lieu_kieu_dinh = db.Column(db.Text, nullable=True)
+
+    def __init__(self, seri_number, phuong_tien_do, seri_chi_thi, seri_sensor, kieu_chi_thi, kieu_sensor, kieu_thiet_bi, co_so_san_xuat, so_tem, nam_san_xuat, dn, d, ccx, q3, r, qn, k_factor, so_qd_pdm, ten_khach_hang, co_so_su_dung, phuong_phap_thuc_hien, chuan_thiet_bi_su_dung, implementer, ngay_thuc_hien, vi_tri, nhiet_do, do_am, du_lieu_kieu_dinh):
+        self.seri_number = seri_number
+        self.phuong_tien_do = phuong_tien_do
+        self.seri_chi_thi = seri_chi_thi
+        self.seri_sensor = seri_sensor
+        self.kieu_chi_thi = kieu_chi_thi
+        self.kieu_sensor = kieu_sensor
+        self.kieu_thiet_bi = kieu_thiet_bi
+        self.co_so_san_xuat = co_so_san_xuat
+        self.so_tem = so_tem
+        self.nam_san_xuat = nam_san_xuat
+        self.dn = dn
+        self.d = d
+        self.ccx = ccx
+        self.q3 = q3
+        self.r = r
+        self.qn = qn
+        self.k_factor = k_factor
+        self.so_qd_pdm = so_qd_pdm
+        self.ten_khach_hang = ten_khach_hang
+        self.co_so_su_dung = co_so_su_dung
+        self.phuong_phap_thuc_hien = phuong_phap_thuc_hien
+        self.chuan_thiet_bi_su_dung = chuan_thiet_bi_su_dung
+        self.implementer = implementer
+        self.ngay_thuc_hien = ngay_thuc_hien
+        self.vi_tri = vi_tri
+        self.nhiet_do = nhiet_do
+        self.do_am = do_am
+        self.du_lieu_kieu_dinh = du_lieu_kieu_dinh
+
+    def to_dict(self):
+        return {
+            'seri_number': self.seri_number,
+            'phuong_tien_do': self.phuong_tien_do,
+            'seri_chi_thi': self.seri_chi_thi,
+            'seri_sensor': self.seri_sensor,
+            'kieu_chi_thi': self.kieu_chi_thi,
+            'kieu_sensor': self.kieu_sensor,
+            'kieu_thiet_bi': self.kieu_thiet_bi,
+            'co_so_san_xuat': self.co_so_san_xuat,
+            'so_tem': self.so_tem,
+            'nam_san_xuat': self.nam_san_xuat,
+            'dn': self.dn,
+            'd': self.d,
+            'ccx': self.ccx,
+            'q3': self.q3,
+            'r': self.r,
+            'qn': self.qn,
+            'k_factor': self.k_factor,
+            'so_qd_pdm': self.so_qd_pdm,
+            'ten_khach_hang': self.ten_khach_hang,
+            'co_so_su_dung': self.co_so_su_dung,
+            'phuong_phap_thuc_hien': self.phuong_phap_thuc_hien,
+            'chuan_thiet_bi_su_dung': self.chuan_thiet_bi_su_dung,
+            'implementer': self.implementer,
+            'ngay_thuc_hien': self.ngay_thuc_hien,
+            'vi_tri': self.vi_tri,
+            'nhiet_do': self.nhiet_do,
+            'do_am': self.do_am,
+            'du_lieu_kieu_dinh': self.du_lieu_kieu_dinh
+        }

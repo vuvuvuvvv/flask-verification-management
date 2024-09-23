@@ -23,10 +23,12 @@ def create_app(config_class=Config):
 
     from app.routes.api.auth import auth_bp
     from app.routes.api.pdm import pdm_bp
+    from app.routes.api.dongho import dongho_bp
     from app.routes.views import main_bp
 
     app.register_blueprint(auth_bp, url_prefix='/api/auth')
     app.register_blueprint(pdm_bp, url_prefix='/api/pdm')
+    app.register_blueprint(dongho_bp, url_prefix='/api/dongho')
     app.register_blueprint(main_bp)
 
     return app
