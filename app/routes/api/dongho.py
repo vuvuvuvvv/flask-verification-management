@@ -9,6 +9,13 @@ dongho_bp = Blueprint('dongho', __name__)
 @jwt_required()
 def create_dongho():
     data = request.get_json()
+    seri_number = data.get('seri_number')
+
+    # Check if seri_number already exists
+    existing_dongho = DongHo.query.filter_by(seri_number=seri_number).first()
+    if existing_dongho:
+        return jsonify({"msg": "Serinumber đã tồn tại!"}), 400
+
     new_dongho = DongHo(**data)
     db.session.add(new_dongho)
     db.session.commit()
@@ -30,7 +37,7 @@ def delete_dongho(id):
     dongho = DongHo.query.get_or_404(id)
     db.session.delete(dongho)
     db.session.commit()
-    return jsonify({"msg": "DongHo deleted"}), 200
+    return jsonify({"msg": "Xóa thành công!"}), 200
 
 @dongho_bp.route('/serinumber/<string:serinumber>', methods=['GET'])
 @jwt_required()
