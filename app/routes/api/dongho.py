@@ -102,7 +102,15 @@ def delete_dongho(serial_number):
 def get_dongho_by_serial_number(serial_number):
     try:
         dongho = DongHo.query.filter_by(serial_number=serial_number).first_or_404()
-        return jsonify(dongho.to_dict()), 200
+        dongho_dict = dongho.to_dict()
+        if "du_lieu_kiem_dinh" in dongho_dict:
+            try:
+                dongho_dict["du_lieu_kiem_dinh"] = json.loads(
+                    dongho_dict["du_lieu_kiem_dinh"]
+                )
+            except json.JSONDecodeError as e:
+                return jsonify({"msg": f"JSON decode error: {str(e)}"}), 500
+        return jsonify(dongho_dict), 200
     except Exception as e:
         return jsonify({"msg": f"Đã xảy ra lỗi: {str(e)}"}), 500
 
