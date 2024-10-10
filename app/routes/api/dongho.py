@@ -2,6 +2,7 @@ from flask import Blueprint, jsonify, request
 from flask_jwt_extended import jwt_required
 from app.models import DongHo
 from app import db
+from werkzeug.exceptions import NotFound
 import json
 
 dongho_bp = Blueprint("dongho", __name__)
@@ -111,9 +112,10 @@ def get_dongho_by_serial_number(serial_number):
             except json.JSONDecodeError as e:
                 return jsonify({"msg": f"JSON decode error: {str(e)}"}), 500
         return jsonify(dongho_dict), 200
+    except NotFound:
+        return jsonify({"msg": "Serial number not found!"}), 404
     except Exception as e:
         return jsonify({"msg": f"Đã xảy ra lỗi: {str(e)}"}), 500
-
 
 @dongho_bp.route("/ten-khach-hang/<string:ten_khach_hang>", methods=["GET"])
 @jwt_required()
