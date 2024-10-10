@@ -134,6 +134,9 @@ class DongHo(db.Model):
     serial_number = db.Column(
         db.String(255), primary_key=True
     )  # Sử dụng serial_number làm khóa chính
+    # Nhóm đồng hồ: UID_TENKHACHHANG_SOLUONG_DATE
+    group_id = db.Column(db.String(255), nullable=True)
+
     phuong_tien_do = db.Column(db.String(255), nullable=True)
     seri_chi_thi = db.Column(db.String(255), nullable=True)
     seri_sensor = db.Column(db.String(255), nullable=True)
