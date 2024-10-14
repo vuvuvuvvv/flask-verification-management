@@ -2,7 +2,7 @@ from app.extensions import db
 from werkzeug.security import generate_password_hash, check_password_hash
 from flask_login import UserMixin
 from datetime import datetime
-
+from helper.url_encrypt import encode, decode
 
 class User(UserMixin, db.Model):
     __tablename__ = "user"
@@ -59,7 +59,7 @@ class PDM(db.Model):
     dn = db.Column(db.String(255), nullable=True)
     ccx = db.Column(db.String(255), nullable=True)
     kieu_sensor = db.Column(db.String(255), nullable=False)
-    transmitter = db.Column(db.String(255), nullable=True)
+    transmitter = db.Column(db.String(255), nullable=True)      # kieu chi thi
     qn = db.Column(db.String(255), nullable=True)
     q3 = db.Column(db.String(255), nullable=True)
     r = db.Column(db.String(255), nullable=True)
@@ -130,12 +130,12 @@ class PDM(db.Model):
 
 class DongHo(db.Model):
     __tablename__ = "dongho"
+    id = db.Column(db.Integer, primary_key=True)
 
-    serial_number = db.Column(
-        db.String(255), primary_key=True
-    )  # Sử dụng serial_number làm khóa chính
     # Nhóm đồng hồ: UID_TENKHACHHANG_SOLUONG_DATE
     group_id = db.Column(db.String(255), nullable=True)
+    
+    ten_dong_ho = db.Column(db.String(255), nullable=False)
 
     phuong_tien_do = db.Column(db.String(255), nullable=True)
     seri_chi_thi = db.Column(db.String(255), nullable=True)
@@ -169,7 +169,8 @@ class DongHo(db.Model):
 
     def __init__(
         self,
-        serial_number,
+        group_id,
+        ten_dong_ho,
         phuong_tien_do,
         seri_chi_thi,
         seri_sensor,
@@ -200,7 +201,8 @@ class DongHo(db.Model):
         hieu_luc_bien_ban,
         so_giay_chung_nhan,
     ):
-        self.serial_number = serial_number
+        self.group_id = group_id
+        self.ten_dong_ho = ten_dong_ho
         self.phuong_tien_do = phuong_tien_do
         self.seri_chi_thi = seri_chi_thi
         self.seri_sensor = seri_sensor
@@ -233,7 +235,9 @@ class DongHo(db.Model):
 
     def to_dict(self):
         return {
-            "serial_number": self.serial_number,
+            "id": encode(self.id),
+            "group_id": self.group_id,
+            "ten_dong_ho": self.ten_dong_ho,
             "phuong_tien_do": self.phuong_tien_do,
             "seri_chi_thi": self.seri_chi_thi,
             "seri_sensor": self.seri_sensor,
