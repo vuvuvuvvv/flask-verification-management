@@ -1,11 +1,11 @@
 from flask import Blueprint, jsonify, request
 from flask_jwt_extended import jwt_required
-from sqlalchemy import or_
+from sqlalchemy import and_, or_
 from app.models import DongHo
 from app import db
 from werkzeug.exceptions import NotFound
 import json
-from helper import decode
+from helper.url_encrypt import decode
 
 dongho_bp = Blueprint("dongho", __name__)
 
@@ -61,33 +61,61 @@ def get_donghos():
 def create_dongho():
     try:
         data = request.get_json()
-        serial_number = data.get("serial_number")
+        data.pop('id', None)
+
         seri_sensor = data.get("seri_sensor")
         seri_chi_thi = data.get("seri_chi_thi")
 
-        # Check if a DongHo exists with either seri_sensor or seri_chi_thi
-        existing_dongho = DongHo.query.filter(
-            or_(DongHo.seri_sensor == seri_sensor, DongHo.seri_chi_thi == seri_chi_thi)
+        existing_dongho = DongHo.query.filter(    
+            or_(
+                and_(DongHo.seri_sensor == seri_sensor, DongHo.seri_sensor != None, DongHo.seri_sensor != ""),
+                and_(DongHo.seri_chi_thi == seri_chi_thi, DongHo.seri_chi_thi != None, DongHo.seri_chi_thi != "")
+            )
         ).first()
 
         if existing_dongho:
             return (
                 jsonify(
                     {
-                        "msg": "A DongHo with the same seri_sensor or seri_chi_thi already exists!"
+                        "msg": "Serial number hoặc Serial chỉ thị đã tồn tại!"
                     }
                 ),
                 400,
             )
+        new_dongho = DongHo(
+            group_id = data.get("group_id"),
+            ten_dong_ho = data.get("ten_dong_ho"),
+            phuong_tien_do = data.get("phuong_tien_do"),
+            seri_chi_thi = data.get("seri_chi_thi"),
+            seri_sensor = data.get("seri_sensor"),
+            kieu_chi_thi = data.get("kieu_chi_thi"),
+            kieu_sensor = data.get("kieu_sensor"),
+            kieu_thiet_bi = data.get("kieu_thiet_bi"),
+            co_so_san_xuat = data.get("co_so_san_xuat"),
+            so_tem = data.get("so_tem"),
+            nam_san_xuat = data.get("nam_san_xuat"),
+            dn = data.get("dn"),
+            d = data.get("d"),
+            ccx = data.get("ccx"),
+            q3 = data.get("q3"),
+            r = data.get("r"),
+            qn = data.get("qn"),
+            k_factor = data.get("k_factor"),
+            so_qd_pdm = data.get("so_qd_pdm"),
+            ten_khach_hang = data.get("ten_khach_hang"),
+            co_so_su_dung = data.get("co_so_su_dung"),
+            phuong_phap_thuc_hien = data.get("phuong_phap_thuc_hien"),
+            chuan_thiet_bi_su_dung = data.get("chuan_thiet_bi_su_dung"),
+            nguoi_kiem_dinh = data.get("nguoi_kiem_dinh"),
+            ngay_thuc_hien = data.get("ngay_thuc_hien"),
+            vi_tri = data.get("vi_tri"),
+            nhiet_do = data.get("nhiet_do"),
+            do_am = data.get("do_am"),
+            du_lieu_kiem_dinh = data.get("du_lieu_kiem_dinh"),
+            hieu_luc_bien_ban = data.get("hieu_luc_bien_ban"),
+            so_giay_chung_nhan = data.get("so_giay_chung_nhan"),
+        )
 
-        # Check if serial_number already exists
-        existing_dongho_serial = DongHo.query.filter_by(
-            serial_number=serial_number
-        ).first()
-        if existing_dongho_serial:
-            return jsonify({"msg": "Serial number đã tồn tại!"}), 400
-
-        new_dongho = DongHo(**data)
         db.session.add(new_dongho)
         db.session.commit()
         return jsonify(new_dongho.to_dict()), 201
@@ -155,13 +183,12 @@ def delete_dongho():
         return jsonify({"msg": f"Đã xảy ra lỗi: {str(e)}"}), 500
 
 
-@dongho_bp.route("/serial-number/<string:id>", methods=["GET"])
+@dongho_bp.route("/id/<string:id>", methods=["GET"])
 @jwt_required()
-def get_dongho_by_id():
+def get_dongho_by_id(id):
     try:
-        data = request.get_json()
-        id = decode(data.get("id"))
-        dongho = DongHo.query.filter_by(id=id).first_or_404()
+        decoded_id = decode(id) 
+        dongho = DongHo.query.filter_by(id=decoded_id).first_or_404()
         dongho_dict = dongho.to_dict()
         if "du_lieu_kiem_dinh" in dongho_dict:
             try:
@@ -172,9 +199,9 @@ def get_dongho_by_id():
                 return jsonify({"msg": f"JSON decode error: {str(e)}"}), 500
         return jsonify(dongho_dict), 200
     except NotFound:
-        return jsonify({"msg": "Serial number not found!"}), 404
+        return jsonify({"msg": "DongHo not found!"}), 404
     except Exception as e:
-        return jsonify({"msg": f"Đã xảy ra lỗi: {str(e)}"}), 500
+        return jsonify({"msg": f"An error occurred: {str(e)}"}), 500
 
 
 @dongho_bp.route("/ten-khach-hang/<string:ten_khach_hang>", methods=["GET"])

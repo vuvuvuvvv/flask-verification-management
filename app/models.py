@@ -1,3 +1,4 @@
+from sqlalchemy import Integer
 from app.extensions import db
 from werkzeug.security import generate_password_hash, check_password_hash
 from flask_login import UserMixin
@@ -130,6 +131,7 @@ class PDM(db.Model):
 
 class DongHo(db.Model):
     __tablename__ = "dongho"
+    
     id = db.Column(db.Integer, primary_key=True)
 
     # Nhóm đồng hồ: UID_TENKHACHHANG_SOLUONG_DATE
