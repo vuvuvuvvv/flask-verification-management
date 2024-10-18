@@ -11,8 +11,16 @@ from app.extensions import *
 def create_app(config_class=Config):
     app = Flask(__name__)
     app.config.from_object(config_class)
+
+    origins = [
+        os.getenv("CLIENT_BASE_URL"),
+        "http://118.71.161.10:3000"
+    ]
     
-    CORS(app, supports_credentials=True, resources={r"/*": {"origins": os.getenv("CLIENT_BASE_URL")}})
+    CORS(app, supports_credentials=True, resources={r"/*": {"origins": origins}})
+    
+
+
     jwt = JWTManager(app)
     jwt.token_in_blocklist_loader(check_if_token_in_blacklist)
 

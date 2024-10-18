@@ -1,6 +1,6 @@
 from flask import Blueprint, jsonify, request
 from flask_jwt_extended import jwt_required
-from sqlalchemy import and_, or_
+from sqlalchemy import and_, or_, cast, Integer
 from app.models import DongHo
 from app import db
 from werkzeug.exceptions import NotFound
@@ -15,6 +15,12 @@ dongho_bp = Blueprint("dongho", __name__)
 def get_donghos():
     try:
         query = DongHo.query
+        
+        is_bigger_than_15 = request.args.get("is_bigger_than_15")
+        if is_bigger_than_15 == '1': 
+            query = query.filter(cast(DongHo.dn, Integer) > 15)
+        else:
+            query = query.filter(cast(DongHo.dn, Integer) <= 15)
 
         so_giay_chung_nhan = request.args.get("so_giay_chung_nhan")
         if so_giay_chung_nhan:

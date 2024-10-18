@@ -134,7 +134,7 @@ class DongHo(db.Model):
     
     id = db.Column(db.Integer, primary_key=True)
 
-    # Nhóm đồng hồ: UID_TENKHACHHANG_SOLUONG_DATE
+    # Nhóm đồng hồ: TENDONGHO+DN+CCX+Q3+R+QN+NGAYTHUCHIEN   (DDMMYYHHmmss)
     group_id = db.Column(db.String(255), nullable=True)
     
     ten_dong_ho = db.Column(db.String(255), nullable=False)
