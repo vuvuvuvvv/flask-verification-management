@@ -238,7 +238,7 @@ class DongHo(db.Model):
     def to_dict(self):
         return {
             "id": encode(self.id),
-            "group_id": self.group_id,
+            "group_id": encode(self.group_id),
             "ten_dong_ho": self.ten_dong_ho,
             "phuong_tien_do": self.phuong_tien_do,
             "seri_chi_thi": self.seri_chi_thi,

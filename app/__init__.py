@@ -13,8 +13,7 @@ def create_app(config_class=Config):
     app.config.from_object(config_class)
 
     origins = [
-        os.getenv("CLIENT_BASE_URL"),
-        "http://118.71.161.10:3000"
+        os.getenv("CLIENT_BASE_URL")
     ]
     
     CORS(app, supports_credentials=True, resources={r"/*": {"origins": origins}})
