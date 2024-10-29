@@ -4,4 +4,4 @@ vfm_env
 *.md
 *.db
 *.sqlite
-*/export/*.xlsx
+excels/export
