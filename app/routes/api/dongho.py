@@ -83,7 +83,7 @@ def get_nhom_dongho():
 
         return jsonify(result_list), 200
     except Exception as e:
-        return jsonify({"msg": f"Đã xảy ra lỗi: {str(e)}"}), 500
+        return jsonify({"msg": f"Đã có lỗi xảy ra! Hãy thử lại sau."}), 500
 
 
 @dongho_bp.route("", methods=["GET"])
@@ -145,11 +145,11 @@ def get_donghos():
                         dongho_dict["du_lieu_kiem_dinh"]
                     )
                 except json.JSONDecodeError as e:
-                    return jsonify({"msg": f"JSON decode error: {str(e)}"}), 500
+                    return jsonify({"msg": f"Đã có lỗi xảy ra! Hãy thử lại sau."}), 500
             result.append(dongho_dict)
         return jsonify(result), 200
     except Exception as e:
-        return jsonify({"msg": f"Đã xảy ra lỗi: {str(e)}"}), 500
+        return jsonify({"msg": f"Đã có lỗi xảy ra! Hãy thử lại sau."}), 500
 
 
 @dongho_bp.route("", methods=["POST"])
@@ -217,7 +217,7 @@ def create_dongho():
         return jsonify(new_dongho.to_dict()), 201
     except Exception as e:
         db.session.rollback()
-        return jsonify({"msg": f"Đã xảy ra lỗi: {str(e)}"}), 500
+        return jsonify({"msg": f"Đã có lỗi xảy ra! Hãy thử lại sau."}), 500
 
 
 @dongho_bp.route("/check-serial/<string:seri>", methods=["GET"])
@@ -246,7 +246,7 @@ def check_serial():
             )
 
     except Exception as e:
-        return jsonify({"msg": f"An error occurred: {str(e)}"}), 500
+        return jsonify({"msg": f"Đã có lỗi xảy ra! Hãy thử lại sau."}), 500
 
 
 @dongho_bp.route("/<string:id>", methods=["PUT"])
@@ -261,7 +261,7 @@ def update_dongho():
         return jsonify(dongho.to_dict()), 200
     except Exception as e:
         db.session.rollback()
-        return jsonify({"msg": f"Đã xảy ra lỗi: {str(e)}"}), 500
+        return jsonify({"msg": f"Đã có lỗi xảy ra! Hãy thử lại sau."}), 500
 
 
 @dongho_bp.route("/<string:id>", methods=["DELETE"])
@@ -276,7 +276,7 @@ def delete_dongho():
         return jsonify({"msg": "Xóa thành công!"}), 200
     except Exception as e:
         db.session.rollback()
-        return jsonify({"msg": f"Đã xảy ra lỗi: {str(e)}"}), 500
+        return jsonify({"msg": f"Đã có lỗi xảy ra! Hãy thử lại sau."}), 500
 
 
 @dongho_bp.route("/id/<string:id>", methods=["GET"])
@@ -292,12 +292,12 @@ def get_dongho_by_id(id):
                     dongho_dict["du_lieu_kiem_dinh"]
                 )
             except json.JSONDecodeError as e:
-                return jsonify({"msg": f"JSON decode error: {str(e)}"}), 500
+                return jsonify({"msg": f"Đã có lỗi xảy ra! Hãy thử lại sau."}), 500
         return jsonify(dongho_dict), 200
     except NotFound:
         return jsonify({"msg": "DongHo not found!"}), 404
     except Exception as e:
-        return jsonify({"msg": f"An error occurred: {str(e)}"}), 500
+        return jsonify({"msg": f"Đã có lỗi xảy ra! Hãy thử lại sau."}), 500
 
 
 @dongho_bp.route("/group_id/<string:group_id>", methods=["GET"])
@@ -315,13 +315,13 @@ def get_dongho_by_group_id(group_id):
                         dongho_dict["du_lieu_kiem_dinh"]
                     )
                 except json.JSONDecodeError as e:
-                    return jsonify({"msg": f"JSON decode error: {str(e)}"}), 500
+                    return jsonify({"msg": f"Đã có lỗi xảy ra! Hãy thử lại sau."}), 500
             result.append(dongho_dict)
         return jsonify(result), 200
     except NotFound:
         return jsonify({"msg": "DongHo not found!"}), 404
     except Exception as e:
-        return jsonify({"msg": f"An error occurred: {str(e)}"}), 500
+        return jsonify({"msg": f"Đã có lỗi xảy ra! Hãy thử lại sau."}), 500
 
 
 @dongho_bp.route("/ten-khach-hang/<string:ten_khach_hang>", methods=["GET"])
@@ -332,4 +332,4 @@ def get_dongho_by_ten_khach_hang(ten_khach_hang):
         result = [dongho.to_dict() for dongho in donghos]
         return jsonify(result), 200
     except Exception as e:
-        return jsonify({"msg": f"Đã xảy ra lỗi: {str(e)}"}), 500
+        return jsonify({"msg": f"Đã có lỗi xảy ra! Hãy thử lại sau."}), 500
