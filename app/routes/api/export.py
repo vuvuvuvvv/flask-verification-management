@@ -47,7 +47,10 @@ def get_bb_kiem_dinh(id):
                     dongho_dict["du_lieu_kiem_dinh"]
                 )
             except json.JSONDecodeError as e:
-                print(f"Error at: {e.msg}")
+                return jsonify({"msg": "Có lỗi xảy ra khi trích xuất dữ liệu! Hãy thử lại"}), 400
+        if not dongho_dict['du_lieu_kiem_dinh']['ket_qua']:
+            return jsonify({"msg": "Đồng hồ không đạt tiêu chuẩn xuất biên bản!"}), 422
+        
         fileName = (
             "KĐ_BB_"
             + (dongho.ten_dong_ho or "")
@@ -196,9 +199,6 @@ def get_bb_kiem_dinh(id):
                 value=f"Địa điểm thực hiện: {dongho.vi_tri}" if dongho.vi_tri else "",
             )
 
-            if dongho.nguoi_kiem_dinh:
-                sheet.cell(row=42, column=5, value=str(dongho.nguoi_kiem_dinh).upper())
-
             desired_height = row_heights * 28.35
             # Run from row: 2
             for row in range(2, sheet.max_row + 1):
@@ -328,6 +328,7 @@ def get_bb_kiem_dinh(id):
     except NotFound:
         return jsonify({"msg": "Id không hợp lệ!"}), 404
     except Exception as e:
+        print(e)
         return jsonify({"msg": f"Đã có lỗi xảy ra: {str(e)}"}), 500
 
 
@@ -345,7 +346,10 @@ def get_gcn_kiem_dinh(id):
                     dongho_dict["du_lieu_kiem_dinh"]
                 )
             except json.JSONDecodeError as e:
-                print(f"Error at: {e.msg}")
+                return jsonify({"msg": "Có lỗi xảy ra khi trích xuất dữ liệu! Hãy thử lại"}), 400
+        if not dongho_dict['du_lieu_kiem_dinh']['ket_qua']:
+            return jsonify({"msg": "Đồng hồ không đạt tiêu chuẩn xuất biên bản!"}), 422
+        
         fileName = (
             "KĐ_GCN_"
             + (dongho.ten_dong_ho or "")
@@ -411,5 +415,6 @@ def get_gcn_kiem_dinh(id):
     except NotFound:
         return jsonify({"msg": "Id không hợp lệ!"}), 404
     except Exception as e:
+        print(e)
         return jsonify({"msg": f"Đã có lỗi xảy ra: {str(e)}"}), 500
 
