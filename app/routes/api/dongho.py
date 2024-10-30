@@ -220,33 +220,34 @@ def create_dongho():
         return jsonify({"msg": f"Đã có lỗi xảy ra! Hãy thử lại sau."}), 500
 
 
-@dongho_bp.route("/check-serial/<string:seri>", methods=["GET"])
+@dongho_bp.route("/dong-ho-info/<string:info>", methods=["GET"])
 @jwt_required()
-def check_serial():
+def get_dongho_by_serial_sensor():
     try:
         data = request.get_json()
-        seri = data.get("seri")
-        if not seri:
-            return jsonify({"msg": "Serial number is required!"}), 400
+        info = data.get("info")
+        if not info:
+            return jsonify({"msg": "Thông tin là bắt buộc!"}), 400
 
         # Check if a DongHo exists with either seri_sensor or seri_chi_thi
         existing_dongho = DongHo.query.filter(
-            or_(DongHo.seri_sensor == seri, DongHo.seri_chi_thi == seri)
+            or_(DongHo.seri_sensor == info, DongHo.seri_chi_thi == info)
         ).first()
 
         if existing_dongho:
             return (
-                jsonify({"exists": True, "msg": "A DongHo with this serial exists."}),
+                jsonify({"exists": True, "msg": "Thông tin đã tồn tại."}),
                 200,
             )
         else:
             return (
-                jsonify({"exists": False, "msg": "No DongHo with this serial found."}),
+                jsonify({"exists": False, "msg": "Thôn tin không tồn tại."}),
                 404,
             )
 
     except Exception as e:
         return jsonify({"msg": f"Đã có lỗi xảy ra! Hãy thử lại sau."}), 500
+
 
 
 @dongho_bp.route("/<string:id>", methods=["PUT"])
