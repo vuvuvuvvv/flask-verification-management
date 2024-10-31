@@ -222,23 +222,18 @@ def create_dongho():
 
 @dongho_bp.route("/dong-ho-info/<string:info>", methods=["GET"])
 @jwt_required()
-def get_dongho_by_serial_sensor():
+def get_dongho_by_info(info):
     try:
-        data = request.get_json()
-        info = data.get("info")
         if not info:
             return jsonify({"msg": "Thông tin là bắt buộc!"}), 400
 
         # Check if a DongHo exists with either seri_sensor or seri_chi_thi
         existing_dongho = DongHo.query.filter(
-            or_(DongHo.seri_sensor == info, DongHo.seri_chi_thi == info)
+            or_(DongHo.seri_sensor == info, DongHo.seri_chi_thi == info, DongHo.so_tem == info, DongHo.so_giay_chung_nhan == info)
         ).first()
 
         if existing_dongho:
-            return (
-                jsonify({"exists": True, "msg": "Thông tin đã tồn tại."}),
-                200,
-            )
+            return jsonify(existing_dongho.to_dict()), 200
         else:
             return (
                 jsonify({"exists": False, "msg": "Thôn tin không tồn tại."}),
