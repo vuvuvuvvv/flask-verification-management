@@ -83,7 +83,7 @@ def get_nhom_dongho():
 
         return jsonify(result_list), 200
     except Exception as e:
-        return jsonify({"msg": f"Đã xảy ra lỗi: {str(e)}"}), 500
+        return jsonify({"msg": f"Đã có lỗi xảy ra! Hãy thử lại sau."}), 500
 
 
 @dongho_bp.route("", methods=["GET"])
@@ -145,11 +145,11 @@ def get_donghos():
                         dongho_dict["du_lieu_kiem_dinh"]
                     )
                 except json.JSONDecodeError as e:
-                    return jsonify({"msg": f"JSON decode error: {str(e)}"}), 500
+                    return jsonify({"msg": f"Đã có lỗi xảy ra! Hãy thử lại sau."}), 500
             result.append(dongho_dict)
         return jsonify(result), 200
     except Exception as e:
-        return jsonify({"msg": f"Đã xảy ra lỗi: {str(e)}"}), 500
+        return jsonify({"msg": f"Đã có lỗi xảy ra! Hãy thử lại sau."}), 500
 
 
 @dongho_bp.route("", methods=["POST"])
@@ -217,36 +217,32 @@ def create_dongho():
         return jsonify(new_dongho.to_dict()), 201
     except Exception as e:
         db.session.rollback()
-        return jsonify({"msg": f"Đã xảy ra lỗi: {str(e)}"}), 500
+        return jsonify({"msg": f"Đã có lỗi xảy ra! Hãy thử lại sau."}), 500
 
 
-@dongho_bp.route("/check-serial/<string:seri>", methods=["GET"])
+@dongho_bp.route("/dong-ho-info/<string:info>", methods=["GET"])
 @jwt_required()
-def check_serial():
+def get_dongho_by_info(info):
     try:
-        data = request.get_json()
-        seri = data.get("seri")
-        if not seri:
-            return jsonify({"msg": "Serial number is required!"}), 400
+        if not info:
+            return jsonify({"msg": "Thông tin là bắt buộc!"}), 400
 
         # Check if a DongHo exists with either seri_sensor or seri_chi_thi
         existing_dongho = DongHo.query.filter(
-            or_(DongHo.seri_sensor == seri, DongHo.seri_chi_thi == seri)
+            or_(DongHo.seri_sensor == info, DongHo.seri_chi_thi == info, DongHo.so_tem == info, DongHo.so_giay_chung_nhan == info)
         ).first()
 
         if existing_dongho:
-            return (
-                jsonify({"exists": True, "msg": "A DongHo with this serial exists."}),
-                200,
-            )
+            return jsonify(existing_dongho.to_dict()), 200
         else:
             return (
-                jsonify({"exists": False, "msg": "No DongHo with this serial found."}),
+                jsonify({"exists": False, "msg": "Thôn tin không tồn tại."}),
                 404,
             )
 
     except Exception as e:
-        return jsonify({"msg": f"An error occurred: {str(e)}"}), 500
+        return jsonify({"msg": f"Đã có lỗi xảy ra! Hãy thử lại sau."}), 500
+
 
 
 @dongho_bp.route("/<string:id>", methods=["PUT"])
@@ -261,7 +257,7 @@ def update_dongho():
         return jsonify(dongho.to_dict()), 200
     except Exception as e:
         db.session.rollback()
-        return jsonify({"msg": f"Đã xảy ra lỗi: {str(e)}"}), 500
+        return jsonify({"msg": f"Đã có lỗi xảy ra! Hãy thử lại sau."}), 500
 
 
 @dongho_bp.route("/<string:id>", methods=["DELETE"])
@@ -276,7 +272,7 @@ def delete_dongho():
         return jsonify({"msg": "Xóa thành công!"}), 200
     except Exception as e:
         db.session.rollback()
-        return jsonify({"msg": f"Đã xảy ra lỗi: {str(e)}"}), 500
+        return jsonify({"msg": f"Đã có lỗi xảy ra! Hãy thử lại sau."}), 500
 
 
 @dongho_bp.route("/id/<string:id>", methods=["GET"])
@@ -292,12 +288,12 @@ def get_dongho_by_id(id):
                     dongho_dict["du_lieu_kiem_dinh"]
                 )
             except json.JSONDecodeError as e:
-                return jsonify({"msg": f"JSON decode error: {str(e)}"}), 500
+                return jsonify({"msg": f"Đã có lỗi xảy ra! Hãy thử lại sau."}), 500
         return jsonify(dongho_dict), 200
     except NotFound:
         return jsonify({"msg": "DongHo not found!"}), 404
     except Exception as e:
-        return jsonify({"msg": f"An error occurred: {str(e)}"}), 500
+        return jsonify({"msg": f"Đã có lỗi xảy ra! Hãy thử lại sau."}), 500
 
 
 @dongho_bp.route("/group_id/<string:group_id>", methods=["GET"])
@@ -315,13 +311,13 @@ def get_dongho_by_group_id(group_id):
                         dongho_dict["du_lieu_kiem_dinh"]
                     )
                 except json.JSONDecodeError as e:
-                    return jsonify({"msg": f"JSON decode error: {str(e)}"}), 500
+                    return jsonify({"msg": f"Đã có lỗi xảy ra! Hãy thử lại sau."}), 500
             result.append(dongho_dict)
         return jsonify(result), 200
     except NotFound:
         return jsonify({"msg": "DongHo not found!"}), 404
     except Exception as e:
-        return jsonify({"msg": f"An error occurred: {str(e)}"}), 500
+        return jsonify({"msg": f"Đã có lỗi xảy ra! Hãy thử lại sau."}), 500
 
 
 @dongho_bp.route("/ten-khach-hang/<string:ten_khach_hang>", methods=["GET"])
@@ -332,4 +328,4 @@ def get_dongho_by_ten_khach_hang(ten_khach_hang):
         result = [dongho.to_dict() for dongho in donghos]
         return jsonify(result), 200
     except Exception as e:
-        return jsonify({"msg": f"Đã xảy ra lỗi: {str(e)}"}), 500
+        return jsonify({"msg": f"Đã có lỗi xảy ra! Hãy thử lại sau."}), 500
