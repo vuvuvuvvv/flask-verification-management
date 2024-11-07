@@ -207,7 +207,7 @@ def get_bb_kiem_dinh(id):
             # Bảng dl: start from row 32:
             du_lieu = dongho_dict['du_lieu_kiem_dinh']['du_lieu']
             hieu_sai_so = list(dongho_dict['du_lieu_kiem_dinh']['hieu_sai_so'])
-            titles = ["Q3","Q2","Q1"] if dongho.q3 else ['Qn', "Qt", "Qmin"]
+            titles = ["Q3","Q2","Q1"] if dongho.q3 else ['Qn', "Qt", "Qmin"] 
 
             black_solid = Side(style="thin", color="000000")   # Viền liền màu đen (mỏng)
             black_dotted = Side(style="dotted", color="000000")
@@ -215,10 +215,19 @@ def get_bb_kiem_dinh(id):
             start_row = 32
             for index, ll in enumerate(titles):
                 tmp_start_row = start_row
+                if ll == "Q1":
+                    ll_display = "QI"
+                elif ll == "Q2":
+                    ll_display = "QII"
+                elif ll == "Q3":
+                    ll_display = "QIII"
+                else:
+                    ll_display = ll
+
                 dl_ll = du_lieu[ll]
                 lan_chay = dict(dl_ll['lan_chay'])
                 #merge cell
-                sheet[f"B{start_row}"] = ll    
+                sheet[f"B{start_row}"] = ll_display
                 sheet[f"D{start_row}"] = dl_ll['value']    
                 sheet[f"AJ{start_row}"] = hieu_sai_so[index]['hss']
                 sheet.merge_cells(f"B{start_row}:C{start_row + len(lan_chay) - 1}")    #title ll

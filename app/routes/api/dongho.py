@@ -2,7 +2,7 @@ from datetime import datetime
 from flask import Blueprint, jsonify, request
 from flask_jwt_extended import jwt_required
 from sqlalchemy import and_, or_, cast, Integer
-from app.models import DongHo
+from app.models import DongHo, PDM
 from app import db
 from werkzeug.exceptions import NotFound
 import json
@@ -147,6 +147,17 @@ def get_donghos():
                 except json.JSONDecodeError as e:
                     return jsonify({"msg": f"Đã có lỗi xảy ra! Hãy thử lại sau."}), 500
             result.append(dongho_dict)
+        return jsonify(result), 200
+    except Exception as e:
+        return jsonify({"msg": f"Đã có lỗi xảy ra! Hãy thử lại sau."}), 500
+
+
+@dongho_bp.route("/get-all-names-exist", methods=["GET"])
+# @jwt_required()
+def get_all_dongho_names_exist():
+    try:
+        ten_dong_ho_distinct = PDM.query.with_entities(PDM.ten_dong_ho).distinct().order_by(PDM.ten_dong_ho).all() 
+        result = [item[0] for item in ten_dong_ho_distinct]
         return jsonify(result), 200
     except Exception as e:
         return jsonify({"msg": f"Đã có lỗi xảy ra! Hãy thử lại sau."}), 500
