@@ -15,9 +15,13 @@ dongho_bp = Blueprint("dongho", __name__)
 def get_nhom_dongho():
     try:
         query = DongHo.query.filter(
-            cast(DongHo.dn, Integer) < 15,
+            # cast(DongHo.dn, Integer) < 15,
             DongHo.group_id.isnot(None) 
         )
+
+        ten_dong_ho = request.args.get("ten_dong_ho")
+        if ten_dong_ho:
+            query = query.filter(DongHo.ten_dong_ho.ilike(f"%{ten_dong_ho}%"))
 
         ten_khach_hang = request.args.get("ten_khach_hang")
         if ten_khach_hang:
@@ -92,11 +96,11 @@ def get_donghos():
     try:
         query = DongHo.query
         
-        is_bigger_than_15 = request.args.get("is_bigger_than_15")
-        if is_bigger_than_15 == '1': 
-            query = query.filter(cast(DongHo.dn, Integer) > 15)
-        else:
-            query = query.filter(cast(DongHo.dn, Integer) <= 15)
+        # is_bigger_than_15 = request.args.get("is_bigger_than_15")
+        # if is_bigger_than_15 == '1': 
+        #     query = query.filter(cast(DongHo.dn, Integer) > 15)
+        # else:
+        #     query = query.filter(cast(DongHo.dn, Integer) <= 15)
 
         so_giay_chung_nhan = request.args.get("so_giay_chung_nhan")
         if so_giay_chung_nhan:
@@ -215,6 +219,7 @@ def create_dongho():
             chuan_thiet_bi_su_dung = data.get("chuan_thiet_bi_su_dung"),
             nguoi_kiem_dinh = data.get("nguoi_kiem_dinh"),
             ngay_thuc_hien = data.get("ngay_thuc_hien"),
+            nơi_su_dung = data.get("nơi_su_dung"),
             vi_tri = data.get("vi_tri"),
             nhiet_do = data.get("nhiet_do"),
             do_am = data.get("do_am"),

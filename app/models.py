@@ -223,6 +223,7 @@ class DongHo(db.Model):
     nguoi_kiem_dinh = db.Column(db.String(255), nullable=True)
     ngay_thuc_hien = db.Column(db.Date, nullable=True)
     hieu_luc_bien_ban = db.Column(db.Date, nullable=True)
+    noi_su_dung = db.Column(db.String(255), nullable=True)
     vi_tri = db.Column(db.String(255), nullable=True)
     nhiet_do = db.Column(db.String(255), nullable=True)
     do_am = db.Column(db.String(255), nullable=True)
@@ -256,6 +257,7 @@ class DongHo(db.Model):
         chuan_thiet_bi_su_dung,
         nguoi_kiem_dinh,
         ngay_thuc_hien,
+        noi_su_dung,
         vi_tri,
         nhiet_do,
         do_am,
@@ -288,6 +290,7 @@ class DongHo(db.Model):
         self.chuan_thiet_bi_su_dung = chuan_thiet_bi_su_dung
         self.nguoi_kiem_dinh = nguoi_kiem_dinh
         self.ngay_thuc_hien = ngay_thuc_hien
+        self.noi_su_dung = noi_su_dung
         self.vi_tri = vi_tri
         self.nhiet_do = nhiet_do
         self.do_am = do_am
@@ -323,6 +326,7 @@ class DongHo(db.Model):
             "chuan_thiet_bi_su_dung": self.chuan_thiet_bi_su_dung,
             "nguoi_kiem_dinh": self.nguoi_kiem_dinh,
             "ngay_thuc_hien": self.ngay_thuc_hien,
+            "noi_su_dung": self.noi_su_dung,
             "vi_tri": self.vi_tri,
             "nhiet_do": self.nhiet_do,
             "do_am": self.do_am,

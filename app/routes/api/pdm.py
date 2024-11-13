@@ -136,10 +136,23 @@ def get_pdm(id):
 @pdm_bp.route("/so_qd_pdm/<string:so_qd_pdm>", methods=["GET"])
 @jwt_required()
 def get_so_qd_pdm(so_qd_pdm):
-    pdm = PDM.query.filter_by(so_qd_pdm=so_qd_pdm).first_or_404()
-    print("pdm: ", pdm)
-    return jsonify(pdm.to_dict()), 200
-
+    try:
+        pdm_identifier = so_qd_pdm.split("-")[0].strip() 
+        year = so_qd_pdm.split("-")[1].strip() 
+        print(f"Identifier: {pdm_identifier}, Year: {year}")
+        query = PDM.query.filter(
+            PDM.so_qd_pdm == pdm_identifier,
+            db.extract('year', PDM.ngay_qd_pdm) == int(year) 
+        )
+        print(query)
+        pdm = query.first() 
+        if pdm is None:
+            return jsonify({"msg": "No matching PDM found."}), 404
+        return jsonify(pdm.to_dict()), 200 
+    except Exception as e:
+        print(e)
+        return jsonify({"msg": "Đã xảy ra lỗi khi lấy thông tin PDM!", "error": str(e)}), 500  
+    
 @pdm_bp.route("/ma_tim_dong_ho_pdm/<string:ma_tim_dong_ho_pdm>", methods=["GET"])
 @jwt_required()
 def get_ma_tim_dong_ho_pdm(ma_tim_dong_ho_pdm):

@@ -93,7 +93,7 @@ def get_bb_kiem_dinh(id):
                 )
 
             sheet.cell(
-                row=5, column=8, value=dongho.ten_dong_ho if dongho.ten_dong_ho else ""
+                row=5, column=8, value=dongho.phuong_tien_do if dongho.phuong_tien_do else ""
             )
             sheet.cell(
                 row=6,
