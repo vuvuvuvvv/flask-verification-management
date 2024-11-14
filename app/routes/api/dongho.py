@@ -7,6 +7,7 @@ from app import db
 from werkzeug.exceptions import NotFound
 import json
 from helper.url_encrypt import decode, encode
+from unidecode import unidecode
 
 dongho_bp = Blueprint("dongho", __name__)
 
@@ -25,7 +26,8 @@ def get_nhom_dongho():
 
         ten_khach_hang = request.args.get("ten_khach_hang")
         if ten_khach_hang:
-            query = query.filter(DongHo.ten_khach_hang.ilike(f"%{ten_khach_hang}%"))
+            for word in ten_khach_hang.split(" "):
+                query = query.filter(DongHo.ten_khach_hang.ilike(f"%{unidecode(word)}%"))
 
         nguoi_kiem_dinh = request.args.get("nguoi_kiem_dinh")
         if nguoi_kiem_dinh:

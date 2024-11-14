@@ -52,17 +52,12 @@ def get_bb_kiem_dinh(id):
             return jsonify({"msg": "Đồng hồ không đạt tiêu chuẩn xuất biên bản!"}), 422
         
         fileName = (
-            "KĐ_BB_"
-            + (dongho.ten_dong_ho or "")
-            + (dongho.dn or "")
-            + (dongho.ccx or "")
-            + (dongho.q3 or "")
-            + (dongho.r or "")
-            + (dongho.qn or "")
-            + (dongho.seri_sensor or "")
-            + (dongho.seri_chi_thi or "")
-            + (dongho.kieu_sensor or "")
-            + (dongho.kieu_chi_thi or "")
+            "KĐ_BB"
+            + ("_" + dongho.so_giay_chung_nhan if dongho.so_giay_chung_nhan else "")
+            + ("_" + dongho.ten_khach_hang if dongho.ten_khach_hang else "")
+            + ("_" + dongho.ten_dong_ho if dongho.ten_dong_ho else "")
+            + ("_" + dongho.dn if dongho.dn else "")
+            + ("_" + dongho.ngay_thuc_hien.strftime("%d-%m-%Y") if dongho.ngay_thuc_hien else "")
             + ".xlsx"
         )
 
@@ -229,11 +224,12 @@ def get_bb_kiem_dinh(id):
                 #merge cell
                 sheet[f"B{start_row}"] = ll_display
                 sheet[f"D{start_row}"] = dl_ll['value']    
-                sheet[f"AJ{start_row}"] = hieu_sai_so[index]['hss']
+                # sheet[f"AJ{start_row}"] = round(hieu_sai_so[index]['hss'], 1)
                 sheet.merge_cells(f"B{start_row}:C{start_row + len(lan_chay) - 1}")    #title ll
                 sheet.merge_cells(f"D{start_row}:F{start_row + len(lan_chay) - 1}")    #value ll
                 sheet.merge_cells(f"AJ{start_row}:AL{start_row + len(lan_chay) - 1}")  #hss
 
+                hss = None
                 for key, val in lan_chay.items():
                     sheet.merge_cells(f"G{start_row}:J{start_row}")
                     sheet[f"G{start_row}"] = val['V1']
@@ -243,7 +239,6 @@ def get_bb_kiem_dinh(id):
                     sheet[f"O{start_row}"] = val['V2'] - val['V1']
                     sheet.merge_cells(f"R{start_row}:S{start_row}")
                     sheet[f"R{start_row}"] = val['Tdh']
-
                     sheet.merge_cells(f"T{start_row}:W{start_row}")
                     sheet[f"T{start_row}"] = val['Vc1']
                     sheet.merge_cells(f"X{start_row}:AA{start_row}")
@@ -255,9 +250,14 @@ def get_bb_kiem_dinh(id):
 
                     sheet.merge_cells(f"AG{start_row}:AI{start_row}")
                     du_lieu_instance = DuLieuMotLanChay(val['V1'], val['V2'], val['Vc1'], val['Vc2'])
-                    sai_so = get_sai_so_dong_ho(du_lieu_instance)
+                    if hss is None:
+                        hss = round(get_sai_so_dong_ho(du_lieu_instance), 1)
+                    else:
+                        hss -= round(get_sai_so_dong_ho(du_lieu_instance), 1)
+                    sai_so = round(get_sai_so_dong_ho(du_lieu_instance), 1)
                     sheet[f"AG{start_row}"] = sai_so if sai_so is not None else "Lỗi"
                     start_row += 1
+                sheet[f"AJ{start_row}"] = hss or round(hieu_sai_so[index]['hss'], 1)
 
                 
                             
@@ -360,17 +360,12 @@ def get_gcn_kiem_dinh(id):
             return jsonify({"msg": "Đồng hồ không đạt tiêu chuẩn xuất biên bản!"}), 422
         
         fileName = (
-            "KĐ_GCN_"
-            + (dongho.ten_dong_ho or "")
-            + (dongho.dn or "")
-            + (dongho.ccx or "")
-            + (dongho.q3 or "")
-            + (dongho.r or "")
-            + (dongho.qn or "")
-            + (dongho.seri_sensor or "")
-            + (dongho.seri_chi_thi or "")
-            + (dongho.kieu_sensor or "")
-            + (dongho.kieu_chi_thi or "")
+            "KĐ_GCN"
+            + ("_" + dongho.so_giay_chung_nhan if dongho.so_giay_chung_nhan else "")
+            + ("_" + dongho.ten_khach_hang if dongho.ten_khach_hang else "")
+            + ("_" + dongho.ten_dong_ho if dongho.ten_dong_ho else "")
+            + ("_" + dongho.dn if dongho.dn else "")
+            + ("_" + dongho.ngay_thuc_hien.strftime("%d-%m-%Y") if dongho.ngay_thuc_hien else "")
             + ".xlsx"
         )
 
