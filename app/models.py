@@ -217,14 +217,16 @@ class DongHo(db.Model):
     k_factor = db.Column(db.String(255), nullable=True)
     so_qd_pdm = db.Column(db.String(255), nullable=True)
     ten_khach_hang = db.Column(db.String(255), nullable=True)
-    co_so_su_dung = db.Column(db.String(255), nullable=True)
+    co_so_su_dung = db.Column(db.String(255), nullable=True)        
+    noi_su_dung = db.Column(db.String(255), nullable=True)          
+    vi_tri = db.Column(db.String(255), nullable=True)               # dia diem noi su dung
+    noi_thuc_hien = db.Column(db.String(255), nullable=True)
     phuong_phap_thuc_hien = db.Column(db.String(255), nullable=True)
     chuan_thiet_bi_su_dung = db.Column(db.String(255), nullable=True)
     nguoi_kiem_dinh = db.Column(db.String(255), nullable=True)
+    nguoi_soat_lai = db.Column(db.String(255), nullable=True)
     ngay_thuc_hien = db.Column(db.Date, nullable=True)
     hieu_luc_bien_ban = db.Column(db.Date, nullable=True)
-    noi_su_dung = db.Column(db.String(255), nullable=True)
-    vi_tri = db.Column(db.String(255), nullable=True)
     nhiet_do = db.Column(db.String(255), nullable=True)
     do_am = db.Column(db.String(255), nullable=True)
     du_lieu_kiem_dinh = db.Column(db.Text, nullable=True)
@@ -256,11 +258,13 @@ class DongHo(db.Model):
         phuong_phap_thuc_hien,
         chuan_thiet_bi_su_dung,
         nguoi_kiem_dinh,
+        nguoi_soat_lai,
         ngay_thuc_hien,
         noi_su_dung,
         vi_tri,
         nhiet_do,
         do_am,
+        noi_thuc_hien,
         du_lieu_kiem_dinh,
         hieu_luc_bien_ban,
         so_giay_chung_nhan,
@@ -289,10 +293,12 @@ class DongHo(db.Model):
         self.phuong_phap_thuc_hien = phuong_phap_thuc_hien
         self.chuan_thiet_bi_su_dung = chuan_thiet_bi_su_dung
         self.nguoi_kiem_dinh = nguoi_kiem_dinh
+        self.nguoi_soat_lai = nguoi_soat_lai
         self.ngay_thuc_hien = ngay_thuc_hien
         self.noi_su_dung = noi_su_dung
         self.vi_tri = vi_tri
         self.nhiet_do = nhiet_do
+        self.noi_thuc_hien = noi_thuc_hien
         self.do_am = do_am
         self.du_lieu_kiem_dinh = du_lieu_kiem_dinh
         self.hieu_luc_bien_ban = hieu_luc_bien_ban
@@ -325,9 +331,11 @@ class DongHo(db.Model):
             "phuong_phap_thuc_hien": self.phuong_phap_thuc_hien,
             "chuan_thiet_bi_su_dung": self.chuan_thiet_bi_su_dung,
             "nguoi_kiem_dinh": self.nguoi_kiem_dinh,
+            "nguoi_soat_lai": self.nguoi_soat_lai,
             "ngay_thuc_hien": self.ngay_thuc_hien,
             "noi_su_dung": self.noi_su_dung,
             "vi_tri": self.vi_tri,
+            "noi_thuc_hien": self.noi_thuc_hien,
             "nhiet_do": self.nhiet_do,
             "do_am": self.do_am,
             "du_lieu_kiem_dinh": self.du_lieu_kiem_dinh,

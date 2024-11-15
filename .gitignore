@@ -6,3 +6,6 @@ vfm_env
 *.sqlite
 excels/export/BB/*.xlsx
 excels/export/GCN/*.xlsx
+migrations
+instance
+seed
