@@ -22,11 +22,20 @@ class DuLieuMotLanChay:
 
 def get_sai_so_dong_ho(form_value: DuLieuMotLanChay) -> float:
     if form_value:
-        if form_value.V2 == 0 and form_value.Vc2 == 0 and form_value.Vc1 == 0:
+        # Kiểm tra và chuyển đổi các giá trị sang float
+        try:
+            V1 = float(form_value.V1) if form_value.V1 not in [None, ''] else 0.0
+            V2 = float(form_value.V2) if form_value.V2 not in [None, ''] else 0.0
+            Vc1 = float(form_value.Vc1) if form_value.Vc1 not in [None, ''] else 0.0
+            Vc2 = float(form_value.Vc2) if form_value.Vc2 not in [None, ''] else 0.0
+        except ValueError:
+            return None  # Hoặc có thể trả về một giá trị mặc định khác
+
+        if V2 == 0 and Vc2 == 0 and Vc1 == 0:
             return None
 
-        VDHCT = form_value.V2 - form_value.V1
-        VDHC = form_value.Vc2 - form_value.Vc1
+        VDHCT = V2 - V1
+        VDHC = Vc2 - Vc1
         if VDHC != 0:
             error = ((VDHCT - VDHC) / VDHC) * 100
             return round(error, 3)  # Làm tròn đến 3 chữ số thập phân
@@ -159,7 +168,7 @@ def get_bb_kiem_dinh(id):
                 sheet.cell(row=12, column=14, value=f"Ký hiệu PDM / Số quyết định:")
                 sheet.cell(row=12, column=26, value=dongho.so_qd_pdm)
 
-            # R18
+            # R19
             if dongho.k_factor:
                 sheet.cell(row=13, column=13, value="-")
                 sheet.cell(row=13, column=14, value=f"Hệ số K:")
@@ -187,6 +196,9 @@ def get_bb_kiem_dinh(id):
                     else ""
                 ),
             )
+
+            sheet[f"R31"] = "°C"
+            sheet[f"AE31"] = "°C"
 
             sheet.cell(
                 row=20,
@@ -236,7 +248,12 @@ def get_bb_kiem_dinh(id):
                     sheet.merge_cells(f"K{start_row}:N{start_row}")
                     sheet[f"K{start_row}"] = val['V2']
                     sheet.merge_cells(f"O{start_row}:Q{start_row}")
-                    sheet[f"O{start_row}"] = val['V2'] - val['V1']
+                    try:
+                        v1 = float(val['V1']) if val['V1'] else 0.0
+                        v2 = float(val['V2']) if val['V2'] else 0.0
+                        sheet[f"O{start_row}"] = v2 - v1 
+                    except ValueError:
+                        sheet[f"O{start_row}"] = "Lỗi"
                     sheet.merge_cells(f"R{start_row}:S{start_row}")
                     sheet[f"R{start_row}"] = val['Tdh']
                     sheet.merge_cells(f"T{start_row}:W{start_row}")
@@ -244,12 +261,28 @@ def get_bb_kiem_dinh(id):
                     sheet.merge_cells(f"X{start_row}:AA{start_row}")
                     sheet[f"X{start_row}"] = val['Vc2']
                     sheet.merge_cells(f"AB{start_row}:AD{start_row}")
-                    sheet[f"AB{start_row}"] = val['Vc2'] - val['Vc1']
+
+                    try:
+                        vc2 = float(val['Vc2']) if val['Vc2'] else 0.0
+                        vc1 = float(val['Vc1']) if val['Vc1'] else 0.0
+                        sheet[f"AB{start_row}"] = vc2 - vc1
+                    except ValueError:
+                        sheet[f"O{start_row}"] = "Lỗi"
+
                     sheet.merge_cells(f"AE{start_row}:AF{start_row}")
                     sheet[f"AE{start_row}"] = val['Tc']
 
                     sheet.merge_cells(f"AG{start_row}:AI{start_row}")
-                    du_lieu_instance = DuLieuMotLanChay(val['V1'], val['V2'], val['Vc1'], val['Vc2'])
+                    try:
+                        v1 = float(val['V1']) if val['V1'] not in [None, ''] else 0.0
+                        v2 = float(val['V2']) if val['V2'] not in [None, ''] else 0.0
+                        vc1 = float(val['Vc1']) if val['Vc1'] not in [None, ''] else 0.0
+                        vc2 = float(val['Vc2']) if val['Vc2'] not in [None, ''] else 0.0
+
+                        du_lieu_instance = DuLieuMotLanChay(v1, v2, vc1, vc2)
+                    except ValueError:
+                        du_lieu_instance = DuLieuMotLanChay(0.0, 0.0, 0.0, 0.0)
+                        
                     if hss is None:
                         hss = round(get_sai_so_dong_ho(du_lieu_instance), 1)
                     else:
@@ -337,7 +370,7 @@ def get_bb_kiem_dinh(id):
     except NotFound:
         return jsonify({"msg": "Id không hợp lệ!"}), 404
     except Exception as e:
-        print(e)
+        print("BB: " + str(e))
         return jsonify({"msg": f"Đã có lỗi xảy ra: {str(e)}"}), 500
 
 
@@ -419,6 +452,6 @@ def get_gcn_kiem_dinh(id):
     except NotFound:
         return jsonify({"msg": "Id không hợp lệ!"}), 404
     except Exception as e:
-        print(e)
+        print("GCN: " + str(e))
         return jsonify({"msg": f"Đã có lỗi xảy ra: {str(e)}"}), 500
 
