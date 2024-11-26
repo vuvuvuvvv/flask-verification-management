@@ -175,7 +175,7 @@ def get_bb_kiem_dinh(id):
                 sheet.cell(row=13, column=19, value=dongho.k_factor)
             # H7
             if dongho.co_so_su_dung:
-                sheet.cell(row=14, column=8, value=dongho.co_so_su_dung)
+                sheet.cell(row=14, column=8, value=dongho.noi_su_dung)
 
             # K10
             if dongho.phuong_phap_thuc_hien:
@@ -203,7 +203,7 @@ def get_bb_kiem_dinh(id):
             sheet.cell(
                 row=20,
                 column=2,
-                value=f"Địa điểm thực hiện: {dongho.vi_tri}" if dongho.vi_tri else "",
+                value=f"Địa điểm thực hiện: {dongho.noi_thuc_hien}" if dongho.noi_thuc_hien else "",
             )
 
             desired_height = row_heights * 28.35
@@ -223,11 +223,11 @@ def get_bb_kiem_dinh(id):
             for index, ll in enumerate(titles):
                 tmp_start_row = start_row
                 if ll == "Q1":
-                    ll_display = "QI"
+                    ll_display = "I"
                 elif ll == "Q2":
-                    ll_display = "QII"
+                    ll_display = "II"
                 elif ll == "Q3":
-                    ll_display = "QIII"
+                    ll_display = "III"
                 else:
                     ll_display = ll
 
@@ -235,7 +235,8 @@ def get_bb_kiem_dinh(id):
                 lan_chay = dict(dl_ll['lan_chay'])
                 #merge cell
                 sheet[f"B{start_row}"] = ll_display
-                sheet[f"D{start_row}"] = dl_ll['value']    
+                
+                sheet[f"D{start_row}"] = (0.3 * (float(dl_ll['value']) if dl_ll['value'] else 0.0)) if ll == "Q3" else dl_ll['value']
                 # sheet[f"AJ{start_row}"] = round(hieu_sai_so[index]['hss'], 1)
                 sheet.merge_cells(f"B{start_row}:C{start_row + len(lan_chay) - 1}")    #title ll
                 sheet.merge_cells(f"D{start_row}:F{start_row + len(lan_chay) - 1}")    #value ll
@@ -290,7 +291,7 @@ def get_bb_kiem_dinh(id):
                     sai_so = round(get_sai_so_dong_ho(du_lieu_instance), 1)
                     sheet[f"AG{start_row}"] = sai_so if sai_so is not None else "Lỗi"
                     start_row += 1
-                sheet[f"AJ{start_row}"] = hss or round(hieu_sai_so[index]['hss'], 1)
+                sheet[f"AJ{start_row - 1}"] = hss or round(hieu_sai_so[index]['hss'], 1)
 
                 
                             
@@ -361,6 +362,7 @@ def get_bb_kiem_dinh(id):
 
             sheet[f"X{start_row}"] = "Người soát lại"
             sheet.merge_cells(f"X{start_row}:AF{start_row}") 
+            sheet[f"W{start_row + 4}"] = str(dongho_dict['nguoi_soat_lai']).upper() if dongho_dict['nguoi_soat_lai'] else ""
             sheet.merge_cells(f"W{start_row + 4}:AG{start_row + 4}")  
 
             # TODO: Save

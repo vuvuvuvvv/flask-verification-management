@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timedelta
 from flask import Blueprint, jsonify, request
 from flask_jwt_extended import jwt_required
 from sqlalchemy import and_, or_, cast, Integer
@@ -217,6 +217,8 @@ def get_all_dongho_names_exist():
     except Exception as e:
         return jsonify({"msg": f"Đã có lỗi xảy ra! Hãy thử lại sau."}), 500
 
+def get_last_day_of_month_in_future(years: int, date: datetime) -> datetime:
+    return datetime(date.year + years, date.month + 1, 1) - timedelta(days=1)
 
 @dongho_bp.route("", methods=["POST"])
 @jwt_required()
@@ -224,6 +226,23 @@ def create_dongho():
     try:
         data = request.get_json()
         data.pop("id", None)
+
+        hieu_luc_bien_ban = None
+        if data.get("so_giay_chung_nhan") and data.get("so_tem"):
+            ngay_thuc_hien = data.get("ngay_thuc_hien")
+            if ngay_thuc_hien:
+                try:
+                    ngay_thuc_hien_date = datetime.strptime(ngay_thuc_hien, "%Y-%m-%dT%H:%M:%S.%fZ")
+                except ValueError:
+                    ngay_thuc_hien_date = datetime.strptime(ngay_thuc_hien, "%Y-%m-%d")
+
+                if data.get("q3"):
+                    hieu_luc_bien_ban = get_last_day_of_month_in_future(3, ngay_thuc_hien_date)
+                elif data.get("qn"):
+                    hieu_luc_bien_ban = get_last_day_of_month_in_future(5, ngay_thuc_hien_date)
+
+                if hieu_luc_bien_ban:
+                    hieu_luc_bien_ban = hieu_luc_bien_ban.date()
 
         seri_sensor = data.get("seri_sensor")
         seri_chi_thi = data.get("seri_chi_thi")
@@ -281,7 +300,7 @@ def create_dongho():
             nhiet_do=data.get("nhiet_do"),
             do_am=data.get("do_am"),
             du_lieu_kiem_dinh=data.get("du_lieu_kiem_dinh"),
-            hieu_luc_bien_ban=data.get("hieu_luc_bien_ban"),
+            hieu_luc_bien_ban=hieu_luc_bien_ban,
             so_giay_chung_nhan=data.get("so_giay_chung_nhan"),
         )
 
