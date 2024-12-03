@@ -27,7 +27,7 @@ def get_pdms():
     if ngay_qd_pdm_from:
         query = query.filter(PDM.ngay_qd_pdm >= ngay_qd_pdm_from)
 
-    ngay_qd_pdm_to = request.args.get("ngay_qd_pdm_to")  # 2024-08-13 00:00:00
+    ngay_qd_pdm_to = request.args.get("ngay_qd_pdm_to")
     if ngay_qd_pdm_to:
         query = query.filter(PDM.ngay_qd_pdm <= ngay_qd_pdm_to)
 
@@ -37,6 +37,22 @@ def get_pdms():
             query = query.filter(PDM.ngay_het_han >= db.func.current_date())
         else:
             query = query.filter(PDM.ngay_het_han < db.func.current_date())
+
+    dn = request.args.get("dn")
+    if dn:
+        query = query.filter(PDM.dn.ilike(f"%{dn}%"))
+
+    ccx = request.args.get("ccx")
+    if ccx:
+        query = query.filter(PDM.ccx.ilike(f"%{ccx}%"))
+
+    kieu_sensor = request.args.get("kieu_sensor")
+    if kieu_sensor:
+        query = query.filter(PDM.kieu_sensor.ilike(f"%{kieu_sensor}%"))
+
+    transmitter = request.args.get("transmitter")
+    if transmitter:
+        query = query.filter(PDM.transmitter.ilike(f"%{transmitter}%"))
 
     pdms = query.all()
 

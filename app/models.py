@@ -3,7 +3,7 @@ from app.extensions import db
 from werkzeug.security import generate_password_hash, check_password_hash
 from flask_login import UserMixin
 from datetime import datetime
-from helper.url_encrypt import encode, decode
+from app.utils.url_encrypt import encode, decode
 
 
 # class Permission:
@@ -65,6 +65,7 @@ from helper.url_encrypt import encode, decode
 #     def __repr__(self):
 #         return '<Role %r>' % self.name
 
+
 class User(UserMixin, db.Model):
     __tablename__ = "user"
     id = db.Column(db.Integer, primary_key=True)
@@ -120,7 +121,7 @@ class PDM(db.Model):
     dn = db.Column(db.String(255), nullable=True)
     ccx = db.Column(db.String(255), nullable=True)
     kieu_sensor = db.Column(db.String(255), nullable=False)
-    transmitter = db.Column(db.String(255), nullable=True)      # kieu chi thi
+    transmitter = db.Column(db.String(255), nullable=True)  # kieu chi thi
     qn = db.Column(db.String(255), nullable=True)
     q3 = db.Column(db.String(255), nullable=True)
     r = db.Column(db.String(255), nullable=True)
@@ -191,12 +192,12 @@ class PDM(db.Model):
 
 class DongHo(db.Model):
     __tablename__ = "dongho"
-    
+
     id = db.Column(db.Integer, primary_key=True)
 
     # Nhóm đồng hồ: TENDONGHO+DN+CCX+Q3+R+QN+NGAYTHUCHIEN   (DDMMYYHHmmss)
     group_id = db.Column(db.String(255), nullable=True)
-    
+
     ten_dong_ho = db.Column(db.String(255), nullable=False)
 
     phuong_tien_do = db.Column(db.String(255), nullable=True)
@@ -217,9 +218,9 @@ class DongHo(db.Model):
     k_factor = db.Column(db.String(255), nullable=True)
     so_qd_pdm = db.Column(db.String(255), nullable=True)
     ten_khach_hang = db.Column(db.String(255), nullable=True)
-    co_so_su_dung = db.Column(db.String(255), nullable=True)        
-    noi_su_dung = db.Column(db.String(255), nullable=True)          
-    vi_tri = db.Column(db.String(255), nullable=True)               # dia diem noi su dung
+    co_so_su_dung = db.Column(db.String(255), nullable=True)
+    noi_su_dung = db.Column(db.String(255), nullable=True)
+    vi_tri = db.Column(db.String(255), nullable=True)  # dia diem noi su dung
     noi_thuc_hien = db.Column(db.String(255), nullable=True)
     phuong_phap_thuc_hien = db.Column(db.String(255), nullable=True)
     chuan_thiet_bi_su_dung = db.Column(db.String(255), nullable=True)
@@ -341,4 +342,29 @@ class DongHo(db.Model):
             "du_lieu_kiem_dinh": self.du_lieu_kiem_dinh,
             "hieu_luc_bien_ban": self.hieu_luc_bien_ban,
             "so_giay_chung_nhan": self.so_giay_chung_nhan,
+        }
+
+
+class NhomDongHoPayment(db.Model):
+    __tablename__ = "nhomdongho_payment"
+    id = db.Column(db.Integer, primary_key=True)
+    group_id = db.Column(db.String(50), nullable=False)
+    is_paid = db.Column(db.Boolean, default=False, nullable=False)
+    paid_date = db.Column(db.DateTime, nullable=True)
+    payment_collector = db.Column(db.String(50), nullable=True)
+
+    def __init__(self, group_id, is_paid=False, paid_date=None, payment_collector=None):
+        self.group_id = group_id
+        self.is_paid = is_paid
+        self.paid_date = paid_date
+        self.payment_collector = payment_collector
+        # self.notes = notes
+
+    def to_dict(self):
+        return {
+            "id": encode(self.id),
+            "group_id": encode(self.group_id),
+            "is_paid": self.is_paid,
+            "paid_date": self.paid_date,
+            "payment_collector": self.payment_collector,
         }
