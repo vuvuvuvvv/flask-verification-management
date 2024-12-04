@@ -72,6 +72,12 @@ def get_bb_kiem_dinh(id):
         )
 
         bb_file_path = f"excels/export/BB/{fileName}"
+        bb_directory = os.path.dirname(bb_file_path)
+
+        # Ensure the directory exists
+        if not os.path.exists(bb_directory):
+            os.makedirs(bb_directory)
+
         if not os.path.exists(bb_file_path):
             src_file = "excels/BB_ExcelForm.xlsx"
             workbook = openpyxl.load_workbook(src_file)
@@ -406,6 +412,12 @@ def get_gcn_kiem_dinh(id):
         )
 
         gcn_file_path = f"excels/export/GCN/{fileName}"
+        gcn_directory = os.path.dirname(gcn_file_path)
+
+        # Ensure the directory exists
+        if not os.path.exists(gcn_directory):
+            os.makedirs(gcn_directory)
+
         if not os.path.exists(gcn_file_path):
             src_file = "excels/GCN_ExcelForm.xlsx"
             workbook = openpyxl.load_workbook(src_file)
