@@ -1,72 +1,103 @@
-from datetime import datetime
+from datetime import datetime, timedelta
+import os
 from flask import Blueprint, jsonify, request
 from flask_jwt_extended import jwt_required
 from sqlalchemy import and_, or_, cast, Integer
-from app.models import DongHo
+from app.models import DongHo, PDM, NhomDongHoPayment
 from app import db
 from werkzeug.exceptions import NotFound
 import json
-from helper.url_encrypt import decode, encode
+from app.utils.url_encrypt import decode, encode
+from unidecode import unidecode
 
 dongho_bp = Blueprint("dongho", __name__)
+
 
 @dongho_bp.route("/group", methods=["GET"])
 @jwt_required()
 def get_nhom_dongho():
     try:
         query = DongHo.query.filter(
-            cast(DongHo.dn, Integer) < 15,
-            DongHo.group_id.isnot(None) 
+            # cast(DongHo.dn, Integer) < 15,
+            DongHo.group_id.isnot(None)
         )
+
+        ten_dong_ho = request.args.get("ten_dong_ho")
+        if ten_dong_ho:
+            query = query.filter(DongHo.ten_dong_ho.ilike(f"%{ten_dong_ho}%"))
 
         ten_khach_hang = request.args.get("ten_khach_hang")
         if ten_khach_hang:
-            query = query.filter(DongHo.ten_khach_hang.ilike(f"%{ten_khach_hang}%"))
+            for word in ten_khach_hang.split(" "):
+                query = query.filter(
+                    DongHo.ten_khach_hang.ilike(f"%{unidecode(word)}%")
+                )
 
         nguoi_kiem_dinh = request.args.get("nguoi_kiem_dinh")
         if nguoi_kiem_dinh:
             query = query.filter(DongHo.nguoi_kiem_dinh.ilike(f"%{nguoi_kiem_dinh}%"))
-
 
         # Chuyển đổi ngày tháng từ chuỗi sang datetime
         ngay_kiem_dinh_from = request.args.get("ngay_kiem_dinh_from")
         if ngay_kiem_dinh_from:
             try:
                 # Loại bỏ phần không cần thiết
-                ngay_kiem_dinh_from = ngay_kiem_dinh_from.split(" (")[0]  # Chỉ lấy phần trước "(Indochina Time)"
-                ngay_kiem_dinh_from = datetime.strptime(ngay_kiem_dinh_from, "%a %b %d %Y %H:%M:%S GMT%z")
+                ngay_kiem_dinh_from = ngay_kiem_dinh_from.split(" (")[
+                    0
+                ]  # Chỉ lấy phần trước "(Indochina Time)"
+                ngay_kiem_dinh_from = datetime.strptime(
+                    ngay_kiem_dinh_from, "%a %b %d %Y %H:%M:%S GMT%z"
+                )
                 query = query.filter(DongHo.ngay_thuc_hien >= ngay_kiem_dinh_from)
             except ValueError as e:
-                return jsonify({"msg": f"Invalid date format for 'ngay_kiem_dinh_from': {str(e)}"}), 400
+                return (
+                    jsonify(
+                        {
+                            "msg": f"Invalid date format for 'ngay_kiem_dinh_from': {str(e)}"
+                        }
+                    ),
+                    400,
+                )
 
         ngay_kiem_dinh_to = request.args.get("ngay_kiem_dinh_to")
         if ngay_kiem_dinh_to:
             try:
                 # Loại bỏ phần không cần thiết
-                ngay_kiem_dinh_to = ngay_kiem_dinh_to.split(" (")[0]  # Chỉ lấy phần trước "(Indochina Time)"
-                ngay_kiem_dinh_to = datetime.strptime(ngay_kiem_dinh_to, "%a %b %d %Y %H:%M:%S GMT%z")
+                ngay_kiem_dinh_to = ngay_kiem_dinh_to.split(" (")[
+                    0
+                ]  # Chỉ lấy phần trước "(Indochina Time)"
+                ngay_kiem_dinh_to = datetime.strptime(
+                    ngay_kiem_dinh_to, "%a %b %d %Y %H:%M:%S GMT%z"
+                )
                 query = query.filter(DongHo.ngay_thuc_hien <= ngay_kiem_dinh_to)
             except ValueError as e:
-                return jsonify({"msg": f"Invalid date format for 'ngay_kiem_dinh_to': {str(e)}"}), 400
+                return (
+                    jsonify(
+                        {
+                            "msg": f"Invalid date format for 'ngay_kiem_dinh_to': {str(e)}"
+                        }
+                    ),
+                    400,
+                )
 
         # Thực hiện nhóm và đếm trực tiếp trong truy vấn
         result = (
-            query
-            .with_entities(
+            query.with_entities(
                 DongHo.group_id,
-                db.func.count(DongHo.id).label('so_luong'),
-                db.func.max(DongHo.ten_dong_ho).label('ten_dong_ho'),
-                db.func.max(DongHo.co_so_san_xuat).label('co_so_san_xuat'),
-                db.func.max(DongHo.ten_khach_hang).label('ten_khach_hang'),
-                db.func.max(DongHo.co_so_su_dung).label('co_so_su_dung'),
-                db.func.max(DongHo.nguoi_kiem_dinh).label('nguoi_kiem_dinh'),
-                db.func.max(DongHo.ngay_thuc_hien).label('ngay_thuc_hien'),
+                db.func.count(DongHo.id).label("so_luong"),
+                db.func.max(DongHo.ten_dong_ho).label("ten_dong_ho"),
+                db.func.max(DongHo.co_so_san_xuat).label("co_so_san_xuat"),
+                db.func.max(DongHo.ten_khach_hang).label("ten_khach_hang"),
+                db.func.max(DongHo.co_so_su_dung).label("co_so_su_dung"),
+                db.func.max(DongHo.nguoi_kiem_dinh).label("nguoi_kiem_dinh"),
+                db.func.max(DongHo.ngay_thuc_hien).label("ngay_thuc_hien"),
             )
             .group_by(DongHo.group_id)
             .all()
         )
 
-        # Chuyển đổi kết quả thành list
+        NDH_payment = {payment.group_id: payment.is_paid for payment in NhomDongHoPayment.query.all()}
+
         result_list = [
             {
                 "group_id": encode(row.group_id),
@@ -77,12 +108,14 @@ def get_nhom_dongho():
                 "co_so_su_dung": row.co_so_su_dung,
                 "nguoi_kiem_dinh": row.nguoi_kiem_dinh,
                 "ngay_thuc_hien": row.ngay_thuc_hien,
+                "is_paid": NDH_payment.get(row.group_id, False)
             }
             for row in result
         ]
 
         return jsonify(result_list), 200
     except Exception as e:
+        print(e)
         return jsonify({"msg": f"Đã có lỗi xảy ra! Hãy thử lại sau."}), 500
 
 
@@ -91,12 +124,12 @@ def get_nhom_dongho():
 def get_donghos():
     try:
         query = DongHo.query
-        
-        is_bigger_than_15 = request.args.get("is_bigger_than_15")
-        if is_bigger_than_15 == '1': 
-            query = query.filter(cast(DongHo.dn, Integer) > 15)
-        else:
-            query = query.filter(cast(DongHo.dn, Integer) <= 15)
+
+        # is_bigger_than_15 = request.args.get("is_bigger_than_15")
+        # if is_bigger_than_15 == '1':
+        #     query = query.filter(cast(DongHo.dn, Integer) > 15)
+        # else:
+        #     query = query.filter(cast(DongHo.dn, Integer) <= 15)
 
         so_giay_chung_nhan = request.args.get("so_giay_chung_nhan")
         if so_giay_chung_nhan:
@@ -112,27 +145,48 @@ def get_donghos():
         if nguoi_kiem_dinh:
             query = query.filter(DongHo.nguoi_kiem_dinh.ilike(f"%{nguoi_kiem_dinh}%"))
 
-
         # Chuyển đổi ngày tháng từ chuỗi sang datetime
         ngay_kiem_dinh_from = request.args.get("ngay_kiem_dinh_from")
         if ngay_kiem_dinh_from:
             try:
                 # Loại bỏ phần không cần thiết
-                ngay_kiem_dinh_from = ngay_kiem_dinh_from.split(" (")[0]  # Chỉ lấy phần trước "(Indochina Time)"
-                ngay_kiem_dinh_from = datetime.strptime(ngay_kiem_dinh_from, "%a %b %d %Y %H:%M:%S GMT%z")
+                ngay_kiem_dinh_from = ngay_kiem_dinh_from.split(" (")[
+                    0
+                ]  # Chỉ lấy phần trước "(Indochina Time)"
+                ngay_kiem_dinh_from = datetime.strptime(
+                    ngay_kiem_dinh_from, "%a %b %d %Y %H:%M:%S GMT%z"
+                )
                 query = query.filter(DongHo.ngay_thuc_hien >= ngay_kiem_dinh_from)
             except ValueError as e:
-                return jsonify({"msg": f"Invalid date format for 'ngay_kiem_dinh_from': {str(e)}"}), 400
+                return (
+                    jsonify(
+                        {
+                            "msg": f"Invalid date format for 'ngay_kiem_dinh_from': {str(e)}"
+                        }
+                    ),
+                    400,
+                )
 
         ngay_kiem_dinh_to = request.args.get("ngay_kiem_dinh_to")
         if ngay_kiem_dinh_to:
             try:
                 # Loại bỏ phần không cần thiết
-                ngay_kiem_dinh_to = ngay_kiem_dinh_to.split(" (")[0]  # Chỉ lấy phần trước "(Indochina Time)"
-                ngay_kiem_dinh_to = datetime.strptime(ngay_kiem_dinh_to, "%a %b %d %Y %H:%M:%S GMT%z")
+                ngay_kiem_dinh_to = ngay_kiem_dinh_to.split(" (")[
+                    0
+                ]  # Chỉ lấy phần trước "(Indochina Time)"
+                ngay_kiem_dinh_to = datetime.strptime(
+                    ngay_kiem_dinh_to, "%a %b %d %Y %H:%M:%S GMT%z"
+                )
                 query = query.filter(DongHo.ngay_thuc_hien <= ngay_kiem_dinh_to)
             except ValueError as e:
-                return jsonify({"msg": f"Invalid date format for 'ngay_kiem_dinh_to': {str(e)}"}), 400
+                return (
+                    jsonify(
+                        {
+                            "msg": f"Invalid date format for 'ngay_kiem_dinh_to': {str(e)}"
+                        }
+                    ),
+                    400,
+                )
 
         donghos = query.all()
 
@@ -152,74 +206,234 @@ def get_donghos():
         return jsonify({"msg": f"Đã có lỗi xảy ra! Hãy thử lại sau."}), 500
 
 
+@dongho_bp.route("/get-all-names-exist", methods=["GET"])
+# @jwt_required()
+def get_all_dongho_names_exist():
+    try:
+        ten_dong_ho_distinct = (
+            PDM.query.with_entities(PDM.ten_dong_ho)
+            .distinct()
+            .order_by(PDM.ten_dong_ho)
+            .all()
+        )
+        result = [item[0] for item in ten_dong_ho_distinct]
+        return jsonify(result), 200
+    except Exception as e:
+        return jsonify({"msg": f"Đã có lỗi xảy ra! Hãy thử lại sau."}), 500
+
+def get_last_day_of_month_in_future(years: int, date: datetime) -> datetime:
+    return datetime(date.year + years, date.month + 1, 1) - timedelta(days=1)
+
 @dongho_bp.route("", methods=["POST"])
 @jwt_required()
 def create_dongho():
     try:
         data = request.get_json()
-        data.pop('id', None)
+        data.pop("id", None)
+
+        hieu_luc_bien_ban = None
+        if data.get("so_giay_chung_nhan") and data.get("so_tem"):
+            ngay_thuc_hien = data.get("ngay_thuc_hien")
+            if ngay_thuc_hien:
+                try:
+                    ngay_thuc_hien_date = datetime.strptime(ngay_thuc_hien, "%Y-%m-%dT%H:%M:%S.%fZ")
+                except ValueError:
+                    ngay_thuc_hien_date = datetime.strptime(ngay_thuc_hien, "%Y-%m-%d")
+
+                if data.get("q3"):
+                    hieu_luc_bien_ban = get_last_day_of_month_in_future(3, ngay_thuc_hien_date)
+                elif data.get("qn"):
+                    hieu_luc_bien_ban = get_last_day_of_month_in_future(5, ngay_thuc_hien_date)
+
+                if hieu_luc_bien_ban:
+                    hieu_luc_bien_ban = hieu_luc_bien_ban.date()
 
         seri_sensor = data.get("seri_sensor")
         seri_chi_thi = data.get("seri_chi_thi")
 
-        existing_dongho = DongHo.query.filter(    
+        existing_dongho = DongHo.query.filter(
             or_(
-                and_(DongHo.seri_sensor == seri_sensor, DongHo.seri_sensor != None, DongHo.seri_sensor != ""),
-                and_(DongHo.seri_chi_thi == seri_chi_thi, DongHo.seri_chi_thi != None, DongHo.seri_chi_thi != "")
+                and_(
+                    DongHo.seri_sensor == seri_sensor,
+                    DongHo.seri_sensor != None,
+                    DongHo.seri_sensor != "",
+                ),
+                and_(
+                    DongHo.seri_chi_thi == seri_chi_thi,
+                    DongHo.seri_chi_thi != None,
+                    DongHo.seri_chi_thi != "",
+                ),
             )
         ).first()
 
         if existing_dongho:
             return (
-                jsonify(
-                    {
-                        "msg": "Serial number hoặc Serial chỉ thị đã tồn tại!"
-                    }
-                ),
+                jsonify({"msg": "Serial number hoặc Serial chỉ thị đã tồn tại!"}),
                 400,
             )
         new_dongho = DongHo(
-            group_id = data.get("group_id"),
-            ten_dong_ho = data.get("ten_dong_ho"),
-            phuong_tien_do = data.get("phuong_tien_do"),
-            seri_chi_thi = data.get("seri_chi_thi"),
-            seri_sensor = data.get("seri_sensor"),
-            kieu_chi_thi = data.get("kieu_chi_thi"),
-            kieu_sensor = data.get("kieu_sensor"),
-            kieu_thiet_bi = data.get("kieu_thiet_bi"),
-            co_so_san_xuat = data.get("co_so_san_xuat"),
-            so_tem = data.get("so_tem"),
-            nam_san_xuat = data.get("nam_san_xuat"),
-            dn = data.get("dn"),
-            d = data.get("d"),
-            ccx = data.get("ccx"),
-            q3 = data.get("q3"),
-            r = data.get("r"),
-            qn = data.get("qn"),
-            k_factor = data.get("k_factor"),
-            so_qd_pdm = data.get("so_qd_pdm"),
-            ten_khach_hang = data.get("ten_khach_hang"),
-            co_so_su_dung = data.get("co_so_su_dung"),
-            phuong_phap_thuc_hien = data.get("phuong_phap_thuc_hien"),
-            chuan_thiet_bi_su_dung = data.get("chuan_thiet_bi_su_dung"),
-            nguoi_kiem_dinh = data.get("nguoi_kiem_dinh"),
-            ngay_thuc_hien = data.get("ngay_thuc_hien"),
-            vi_tri = data.get("vi_tri"),
-            nhiet_do = data.get("nhiet_do"),
-            do_am = data.get("do_am"),
-            du_lieu_kiem_dinh = data.get("du_lieu_kiem_dinh"),
-            hieu_luc_bien_ban = data.get("hieu_luc_bien_ban"),
-            so_giay_chung_nhan = data.get("so_giay_chung_nhan"),
+            group_id=data.get("group_id"),
+            ten_dong_ho=data.get("ten_dong_ho"),
+            phuong_tien_do=data.get("phuong_tien_do"),
+            seri_chi_thi=data.get("seri_chi_thi"),
+            seri_sensor=data.get("seri_sensor"),
+            kieu_chi_thi=data.get("kieu_chi_thi"),
+            kieu_sensor=data.get("kieu_sensor"),
+            kieu_thiet_bi=data.get("kieu_thiet_bi"),
+            co_so_san_xuat=data.get("co_so_san_xuat"),
+            so_tem=data.get("so_tem"),
+            nam_san_xuat=data.get("nam_san_xuat"),
+            dn=data.get("dn"),
+            d=data.get("d"),
+            ccx=data.get("ccx"),
+            q3=data.get("q3"),
+            r=data.get("r"),
+            qn=data.get("qn"),
+            k_factor=data.get("k_factor"),
+            so_qd_pdm=data.get("so_qd_pdm"),
+            ten_khach_hang=data.get("ten_khach_hang"),
+            co_so_su_dung=data.get("co_so_su_dung"),
+            phuong_phap_thuc_hien=data.get("phuong_phap_thuc_hien"),
+            chuan_thiet_bi_su_dung=data.get("chuan_thiet_bi_su_dung"),
+            nguoi_kiem_dinh=data.get("nguoi_kiem_dinh"),
+            nguoi_soat_lai=data.get("nguoi_soat_lai"),
+            ngay_thuc_hien=data.get("ngay_thuc_hien"),
+            noi_su_dung=data.get("noi_su_dung"),
+            noi_thuc_hien=data.get("noi_thuc_hien"),
+            vi_tri=data.get("vi_tri"),
+            nhiet_do=data.get("nhiet_do"),
+            do_am=data.get("do_am"),
+            du_lieu_kiem_dinh=data.get("du_lieu_kiem_dinh"),
+            hieu_luc_bien_ban=hieu_luc_bien_ban,
+            so_giay_chung_nhan=data.get("so_giay_chung_nhan"),
         )
+        
+        # if(data.get("so_giay_chung_nhan") == "123334"):
+        #     err = 100 / 0
 
         db.session.add(new_dongho)
         db.session.commit()
         return jsonify(new_dongho.to_dict()), 201
     except Exception as e:
+        print(e)
         db.session.rollback()
         return jsonify({"msg": f"Đã có lỗi xảy ra! Hãy thử lại sau."}), 500
 
+@dongho_bp.route("/<string:id>", methods=["PUT"])
+@jwt_required()
+def update_dongho(id):
+    try:
+        data = request.get_json()
+        
+        try:
+            decoded_id = decode(id)
+        except Exception as e:
+            return jsonify({"msg": "Invalid ID format!"}), 404
 
+        dongho = DongHo.query.get_or_404(decoded_id)
+        middleFileName = (
+            ("_" + dongho.so_giay_chung_nhan if dongho.so_giay_chung_nhan else "")
+            + ("_" + dongho.ten_khach_hang if dongho.ten_khach_hang else "")
+            + ("_" + dongho.ten_dong_ho if dongho.ten_dong_ho else "")
+            + ("_DN" + dongho.dn if dongho.dn else "")
+            + ("_" + dongho.ngay_thuc_hien.strftime("%d-%m-%Y") if dongho.ngay_thuc_hien else "")
+            + ".xlsx"
+        )
+
+        bb_file_path = f"excels/export/BB/KĐ_BB{middleFileName}"
+        gcn_file_path = f"excels/export/BB/KĐ_GCN{middleFileName}"
+
+        hieu_luc_bien_ban = None
+        if data.get("so_giay_chung_nhan") and data.get("so_tem"):
+            ngay_thuc_hien = data.get("ngay_thuc_hien")
+            if ngay_thuc_hien:
+                try:
+                    # Use the correct format string for parsing
+                    ngay_thuc_hien_date = datetime.strptime(ngay_thuc_hien, "%a, %d %b %Y %H:%M:%S %Z")
+                except ValueError as e:
+                    return jsonify({"msg": f"Invalid date format: {str(e)}"}), 400
+
+                if data.get("q3"):
+                    hieu_luc_bien_ban = get_last_day_of_month_in_future(3, ngay_thuc_hien_date)
+                elif data.get("qn"):
+                    hieu_luc_bien_ban = get_last_day_of_month_in_future(5, ngay_thuc_hien_date)
+
+                if hieu_luc_bien_ban:
+                    hieu_luc_bien_ban = hieu_luc_bien_ban.date()
+
+        seri_sensor = data.get("seri_sensor")
+        seri_chi_thi = data.get("seri_chi_thi")
+
+        existing_dongho = DongHo.query.filter(
+            DongHo.id != decoded_id,
+            or_(
+                and_(
+                    DongHo.seri_sensor == seri_sensor,
+                    DongHo.seri_sensor != None,
+                    DongHo.seri_sensor != "",
+                ),
+                and_(
+                    DongHo.seri_chi_thi == seri_chi_thi,
+                    DongHo.seri_chi_thi != None,
+                    DongHo.seri_chi_thi != "",
+                ),
+            )
+        ).first()
+
+        if existing_dongho:
+            return (
+                jsonify({"msg": "Serial number hoặc Serial chỉ thị đã tồn tại!"}),
+                400,
+            )
+
+        # Update fields
+        # dongho.group_id = data.get("group_id")
+        dongho.ten_dong_ho = data.get("ten_dong_ho")
+        dongho.phuong_tien_do = data.get("phuong_tien_do")
+        dongho.seri_chi_thi = data.get("seri_chi_thi")
+        dongho.seri_sensor = data.get("seri_sensor")
+        dongho.kieu_chi_thi = data.get("kieu_chi_thi")
+        dongho.kieu_sensor = data.get("kieu_sensor")
+        dongho.kieu_thiet_bi = data.get("kieu_thiet_bi")
+        dongho.co_so_san_xuat = data.get("co_so_san_xuat")
+        dongho.so_tem = data.get("so_tem")
+        dongho.nam_san_xuat = data.get("nam_san_xuat")
+        dongho.dn = data.get("dn")
+        dongho.d = data.get("d")
+        dongho.ccx = data.get("ccx")
+        dongho.q3 = data.get("q3")
+        dongho.r = data.get("r")
+        dongho.qn = data.get("qn")
+        dongho.k_factor = data.get("k_factor")
+        dongho.so_qd_pdm = data.get("so_qd_pdm")
+        dongho.ten_khach_hang = data.get("ten_khach_hang")
+        dongho.co_so_su_dung = data.get("co_so_su_dung")
+        dongho.phuong_phap_thuc_hien = data.get("phuong_phap_thuc_hien")
+        dongho.chuan_thiet_bi_su_dung = data.get("chuan_thiet_bi_su_dung")
+        dongho.nguoi_kiem_dinh = data.get("nguoi_kiem_dinh")
+        dongho.nguoi_soat_lai = data.get("nguoi_soat_lai")
+        dongho.ngay_thuc_hien = data.get("ngay_thuc_hien")  # Use the parsed date
+        dongho.noi_su_dung = data.get("noi_su_dung")
+        dongho.noi_thuc_hien = data.get("noi_thuc_hien")
+        dongho.vi_tri = data.get("vi_tri")
+        dongho.nhiet_do = data.get("nhiet_do")
+        dongho.do_am = data.get("do_am")
+        dongho.du_lieu_kiem_dinh = data.get("du_lieu_kiem_dinh")  # Convert to JSON string
+        dongho.hieu_luc_bien_ban = hieu_luc_bien_ban
+        dongho.so_giay_chung_nhan = data.get("so_giay_chung_nhan")
+
+        db.session.commit()
+        if os.path.exists(bb_file_path):
+            os.remove(bb_file_path)
+        if os.path.exists(gcn_file_path):
+            os.remove(gcn_file_path)
+        
+        return jsonify(dongho.to_dict()), 200
+    except Exception as e:
+        print(e)
+        db.session.rollback()
+        return jsonify({"msg": f"Đã có lỗi xảy ra! Hãy thử lại sau."}), 500
+    
 @dongho_bp.route("/dong-ho-info/<string:info>", methods=["GET"])
 @jwt_required()
 def get_dongho_by_info(info):
@@ -229,7 +443,12 @@ def get_dongho_by_info(info):
 
         # Check if a DongHo exists with either seri_sensor or seri_chi_thi
         existing_dongho = DongHo.query.filter(
-            or_(DongHo.seri_sensor == info, DongHo.seri_chi_thi == info, DongHo.so_tem == info, DongHo.so_giay_chung_nhan == info)
+            or_(
+                DongHo.seri_sensor == info,
+                DongHo.seri_chi_thi == info,
+                DongHo.so_tem == info,
+                DongHo.so_giay_chung_nhan == info,
+            )
         ).first()
 
         if existing_dongho:
@@ -244,28 +463,15 @@ def get_dongho_by_info(info):
         return jsonify({"msg": f"Đã có lỗi xảy ra! Hãy thử lại sau."}), 500
 
 
-
-@dongho_bp.route("/<string:id>", methods=["PUT"])
-@jwt_required()
-def update_dongho():
-    try:
-        data = request.get_json()
-        dongho = DongHo.query.get_or_404(decode(data.get("id")))
-        for key, value in data.items():
-            setattr(dongho, key, value)
-        db.session.commit()
-        return jsonify(dongho.to_dict()), 200
-    except Exception as e:
-        db.session.rollback()
-        return jsonify({"msg": f"Đã có lỗi xảy ra! Hãy thử lại sau."}), 500
-
-
 @dongho_bp.route("/<string:id>", methods=["DELETE"])
 @jwt_required()
 def delete_dongho():
     try:
         data = request.get_json()
-        id = decode(data.get("id"))
+        try:
+            id = decode(data.get("id"))
+        except Exception as e:
+            return jsonify({"msg": "Id không hợp lệ!"}), 404
         dongho = DongHo.query.get_or_404(id)
         db.session.delete(dongho)
         db.session.commit()
@@ -279,7 +485,10 @@ def delete_dongho():
 @jwt_required()
 def get_dongho_by_id(id):
     try:
-        decoded_id = decode(id) 
+        try:
+            decoded_id = decode(id)
+        except Exception as e:
+            return jsonify({"msg": "Id không hợp lệ!"}), 404
         dongho = DongHo.query.filter_by(id=decoded_id).first_or_404()
         dongho_dict = dongho.to_dict()
         if "du_lieu_kiem_dinh" in dongho_dict:
@@ -291,7 +500,7 @@ def get_dongho_by_id(id):
                 return jsonify({"msg": f"Đã có lỗi xảy ra! Hãy thử lại sau."}), 500
         return jsonify(dongho_dict), 200
     except NotFound:
-        return jsonify({"msg": "DongHo not found!"}), 404
+        return jsonify({"msg": "Id không hợp lệ!"}), 404
     except Exception as e:
         return jsonify({"msg": f"Đã có lỗi xảy ra! Hãy thử lại sau."}), 500
 
@@ -300,7 +509,10 @@ def get_dongho_by_id(id):
 @jwt_required()
 def get_dongho_by_group_id(group_id):
     try:
-        decoded_group_id = decode(group_id) 
+        try:
+            decoded_group_id = decode(group_id)
+        except Exception as e:
+            return jsonify({"msg": "Id không hợp lệ!"}), 404
         donghos = DongHo.query.filter_by(group_id=decoded_group_id).all()
         result = []
         for dongho in donghos:
@@ -328,4 +540,41 @@ def get_dongho_by_ten_khach_hang(ten_khach_hang):
         result = [dongho.to_dict() for dongho in donghos]
         return jsonify(result), 200
     except Exception as e:
+        return jsonify({"msg": f"Đã có lỗi xảy ra! Hãy thử lại sau."}), 500
+
+
+@dongho_bp.route("/payment-status", methods=["PUT"])
+@jwt_required()
+def update_payment_status():
+    try:
+        data = request.get_json()
+        group_id = data.get("group_id")
+        username = data.get("username") if data.get("username") else ""
+        new_payment_status = data.get("new_payment_status")
+
+        if not group_id or new_payment_status is None:
+            return jsonify({"msg": "Group ID và trạng thái thanh toán mới là bắt buộc!"}), 400
+
+        try:
+            decoded_group_id = decode(group_id)
+        except Exception as e:
+            return jsonify({"msg": "Id không hợp lệ!"}), 404
+
+        nhom_dongho_payment = NhomDongHoPayment.query.filter_by(group_id=decoded_group_id).first()
+
+        if nhom_dongho_payment:
+            nhom_dongho_payment.is_paid = new_payment_status
+        else:
+            nhom_dongho_payment = NhomDongHoPayment(
+                group_id=decoded_group_id,
+                is_paid=new_payment_status,
+                payment_collector=username
+            )
+            db.session.add(nhom_dongho_payment)
+
+        db.session.commit()
+
+        return jsonify({"msg": "Cập nhật trạng thái thanh toán thành công!"}), 200
+    except Exception as e:
+        db.session.rollback()
         return jsonify({"msg": f"Đã có lỗi xảy ra! Hãy thử lại sau."}), 500

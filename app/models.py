@@ -3,7 +3,68 @@ from app.extensions import db
 from werkzeug.security import generate_password_hash, check_password_hash
 from flask_login import UserMixin
 from datetime import datetime
-from helper.url_encrypt import encode, decode
+from app.utils.url_encrypt import encode, decode
+
+
+# class Permission:
+#     VIEW = 1
+#     MANAGE = 2
+#     DIRECTOR = 4
+#     ADMIN = 8
+#     SUPERADMIN = 16
+
+
+# class Role(db.Model):
+#     __tablename__ = 'roles'
+#     id = db.Column(db.Integer, primary_key=True)
+#     name = db.Column(db.String(64), unique=True)
+#     default = db.Column(db.Boolean, default=False, index=True)
+#     permissions = db.Column(db.Integer)
+#     users = db.relationship('User', backref='role', lazy='dynamic')
+
+#     def __init__(self, **kwargs):
+#         super(Role, self).__init__(**kwargs)
+#         if self.permissions is None:
+#             self.permissions = 0
+
+#     @staticmethod
+#     def insert_roles():
+#         roles = {
+#             'User': (Permission.VIEW, None),
+#             'Manager': (Permission.VIEW , Permission.MANAGE),
+#             'Director': (Permission.VIEW , Permission.MANAGE , Permission.DIRECTOR),
+#             'Administrator': (Permission.VIEW , Permission.MANAGE , Permission.DIRECTOR , Permission.ADMIN),
+#             'SuperAdministrator':(Permission.VIEW , Permission.MANAGE , Permission.DIRECTOR , Permission.ADMIN , Permission.SUPERADMIN),
+#         }
+#         default_role = 'User'
+#         for r in roles:
+#             role = Role.query.filter_by(name=r).first()
+#             if role is None:
+#                 role = Role(name=r)
+#             role.reset_permissions()
+#             for perm in (roles[r]):
+#                 if perm: role.add_permission(perm)
+#             role.default = (role.name == default_role)
+#             db.session.add(role)
+#         db.session.commit()
+
+#     def add_permission(self, perm):
+#         if not self.has_permission(perm):
+#             self.permissions += perm
+
+#     def remove_permission(self, perm):
+#         if self.has_permission(perm):
+#             self.permissions -= perm
+
+#     def reset_permissions(self):
+#         self.permissions = 0
+
+#     def has_permission(self, perm):
+#         return self.permissions & perm == perm
+
+#     def __repr__(self):
+#         return '<Role %r>' % self.name
+
 
 class User(UserMixin, db.Model):
     __tablename__ = "user"
@@ -60,7 +121,7 @@ class PDM(db.Model):
     dn = db.Column(db.String(255), nullable=True)
     ccx = db.Column(db.String(255), nullable=True)
     kieu_sensor = db.Column(db.String(255), nullable=False)
-    transmitter = db.Column(db.String(255), nullable=True)      # kieu chi thi
+    transmitter = db.Column(db.String(255), nullable=True)  # kieu chi thi
     qn = db.Column(db.String(255), nullable=True)
     q3 = db.Column(db.String(255), nullable=True)
     r = db.Column(db.String(255), nullable=True)
@@ -131,12 +192,12 @@ class PDM(db.Model):
 
 class DongHo(db.Model):
     __tablename__ = "dongho"
-    
+
     id = db.Column(db.Integer, primary_key=True)
 
     # Nhóm đồng hồ: TENDONGHO+DN+CCX+Q3+R+QN+NGAYTHUCHIEN   (DDMMYYHHmmss)
     group_id = db.Column(db.String(255), nullable=True)
-    
+
     ten_dong_ho = db.Column(db.String(255), nullable=False)
 
     phuong_tien_do = db.Column(db.String(255), nullable=True)
@@ -158,12 +219,15 @@ class DongHo(db.Model):
     so_qd_pdm = db.Column(db.String(255), nullable=True)
     ten_khach_hang = db.Column(db.String(255), nullable=True)
     co_so_su_dung = db.Column(db.String(255), nullable=True)
+    noi_su_dung = db.Column(db.String(255), nullable=True)
+    vi_tri = db.Column(db.String(255), nullable=True)  # dia diem noi su dung
+    noi_thuc_hien = db.Column(db.String(255), nullable=True)
     phuong_phap_thuc_hien = db.Column(db.String(255), nullable=True)
     chuan_thiet_bi_su_dung = db.Column(db.String(255), nullable=True)
     nguoi_kiem_dinh = db.Column(db.String(255), nullable=True)
+    nguoi_soat_lai = db.Column(db.String(255), nullable=True)
     ngay_thuc_hien = db.Column(db.Date, nullable=True)
     hieu_luc_bien_ban = db.Column(db.Date, nullable=True)
-    vi_tri = db.Column(db.String(255), nullable=True)
     nhiet_do = db.Column(db.String(255), nullable=True)
     do_am = db.Column(db.String(255), nullable=True)
     du_lieu_kiem_dinh = db.Column(db.Text, nullable=True)
@@ -195,10 +259,13 @@ class DongHo(db.Model):
         phuong_phap_thuc_hien,
         chuan_thiet_bi_su_dung,
         nguoi_kiem_dinh,
+        nguoi_soat_lai,
         ngay_thuc_hien,
+        noi_su_dung,
         vi_tri,
         nhiet_do,
         do_am,
+        noi_thuc_hien,
         du_lieu_kiem_dinh,
         hieu_luc_bien_ban,
         so_giay_chung_nhan,
@@ -227,9 +294,12 @@ class DongHo(db.Model):
         self.phuong_phap_thuc_hien = phuong_phap_thuc_hien
         self.chuan_thiet_bi_su_dung = chuan_thiet_bi_su_dung
         self.nguoi_kiem_dinh = nguoi_kiem_dinh
+        self.nguoi_soat_lai = nguoi_soat_lai
         self.ngay_thuc_hien = ngay_thuc_hien
+        self.noi_su_dung = noi_su_dung
         self.vi_tri = vi_tri
         self.nhiet_do = nhiet_do
+        self.noi_thuc_hien = noi_thuc_hien
         self.do_am = do_am
         self.du_lieu_kiem_dinh = du_lieu_kiem_dinh
         self.hieu_luc_bien_ban = hieu_luc_bien_ban
@@ -262,11 +332,39 @@ class DongHo(db.Model):
             "phuong_phap_thuc_hien": self.phuong_phap_thuc_hien,
             "chuan_thiet_bi_su_dung": self.chuan_thiet_bi_su_dung,
             "nguoi_kiem_dinh": self.nguoi_kiem_dinh,
+            "nguoi_soat_lai": self.nguoi_soat_lai,
             "ngay_thuc_hien": self.ngay_thuc_hien,
+            "noi_su_dung": self.noi_su_dung,
             "vi_tri": self.vi_tri,
+            "noi_thuc_hien": self.noi_thuc_hien,
             "nhiet_do": self.nhiet_do,
             "do_am": self.do_am,
             "du_lieu_kiem_dinh": self.du_lieu_kiem_dinh,
             "hieu_luc_bien_ban": self.hieu_luc_bien_ban,
             "so_giay_chung_nhan": self.so_giay_chung_nhan,
+        }
+
+
+class NhomDongHoPayment(db.Model):
+    __tablename__ = "nhomdongho_payment"
+    id = db.Column(db.Integer, primary_key=True)
+    group_id = db.Column(db.String(50), nullable=False)
+    is_paid = db.Column(db.Boolean, default=False, nullable=False)
+    paid_date = db.Column(db.DateTime, nullable=True)
+    payment_collector = db.Column(db.String(50), nullable=True)
+
+    def __init__(self, group_id, is_paid=False, paid_date=None, payment_collector=None):
+        self.group_id = group_id
+        self.is_paid = is_paid
+        self.paid_date = paid_date
+        self.payment_collector = payment_collector
+        # self.notes = notes
+
+    def to_dict(self):
+        return {
+            "id": encode(self.id),
+            "group_id": encode(self.group_id),
+            "is_paid": self.is_paid,
+            "paid_date": self.paid_date,
+            "payment_collector": self.payment_collector,
         }

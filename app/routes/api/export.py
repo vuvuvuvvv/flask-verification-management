@@ -4,10 +4,11 @@ from app.models import DongHo
 from app import db
 from werkzeug.exceptions import NotFound
 import json
-from helper.url_encrypt import decode
+from app.utils.url_encrypt import decode
 import openpyxl
 from openpyxl.drawing.image import Image
 from openpyxl.styles import Border, Side
+from app.constants import PP_THUC_HIEN
 
 import os
 
@@ -22,11 +23,20 @@ class DuLieuMotLanChay:
 
 def get_sai_so_dong_ho(form_value: DuLieuMotLanChay) -> float:
     if form_value:
-        if form_value.V2 == 0 and form_value.Vc2 == 0 and form_value.Vc1 == 0:
+        # Kiểm tra và chuyển đổi các giá trị sang float
+        try:
+            V1 = float(form_value.V1) if form_value.V1 not in [None, ''] else 0.0
+            V2 = float(form_value.V2) if form_value.V2 not in [None, ''] else 0.0
+            Vc1 = float(form_value.Vc1) if form_value.Vc1 not in [None, ''] else 0.0
+            Vc2 = float(form_value.Vc2) if form_value.Vc2 not in [None, ''] else 0.0
+        except ValueError:
+            return None  # Hoặc có thể trả về một giá trị mặc định khác
+
+        if V2 == 0 and Vc2 == 0 and Vc1 == 0:
             return None
 
-        VDHCT = form_value.V2 - form_value.V1
-        VDHC = form_value.Vc2 - form_value.Vc1
+        VDHCT = V2 - V1
+        VDHC = Vc2 - Vc1
         if VDHC != 0:
             error = ((VDHCT - VDHC) / VDHC) * 100
             return round(error, 3)  # Làm tròn đến 3 chữ số thập phân
@@ -52,17 +62,12 @@ def get_bb_kiem_dinh(id):
             return jsonify({"msg": "Đồng hồ không đạt tiêu chuẩn xuất biên bản!"}), 422
         
         fileName = (
-            "KĐ_BB_"
-            + (dongho.ten_dong_ho or "")
-            + (dongho.dn or "")
-            + (dongho.ccx or "")
-            + (dongho.q3 or "")
-            + (dongho.r or "")
-            + (dongho.qn or "")
-            + (dongho.seri_sensor or "")
-            + (dongho.seri_chi_thi or "")
-            + (dongho.kieu_sensor or "")
-            + (dongho.kieu_chi_thi or "")
+            "KĐ_BB"
+            + ("_" + dongho.so_giay_chung_nhan if dongho.so_giay_chung_nhan else "")
+            + ("_" + dongho.ten_khach_hang if dongho.ten_khach_hang else "")
+            + ("_" + dongho.ten_dong_ho if dongho.ten_dong_ho else "")
+            + ("_DN" + dongho.dn if dongho.dn else "")
+            + ("_" + dongho.ngay_thuc_hien.strftime("%d-%m-%Y") if dongho.ngay_thuc_hien else "")
             + ".xlsx"
         )
 
@@ -93,7 +98,7 @@ def get_bb_kiem_dinh(id):
                 )
 
             sheet.cell(
-                row=5, column=8, value=dongho.ten_dong_ho if dongho.ten_dong_ho else ""
+                row=5, column=8, value=dongho.phuong_tien_do if dongho.phuong_tien_do else ""
             )
             sheet.cell(
                 row=6,
@@ -164,14 +169,14 @@ def get_bb_kiem_dinh(id):
                 sheet.cell(row=12, column=14, value=f"Ký hiệu PDM / Số quyết định:")
                 sheet.cell(row=12, column=26, value=dongho.so_qd_pdm)
 
-            # R18
+            # R19
             if dongho.k_factor:
                 sheet.cell(row=13, column=13, value="-")
                 sheet.cell(row=13, column=14, value=f"Hệ số K:")
                 sheet.cell(row=13, column=19, value=dongho.k_factor)
             # H7
             if dongho.co_so_su_dung:
-                sheet.cell(row=14, column=8, value=dongho.co_so_su_dung)
+                sheet.cell(row=14, column=8, value=dongho.noi_su_dung)
 
             # K10
             if dongho.phuong_phap_thuc_hien:
@@ -193,10 +198,13 @@ def get_bb_kiem_dinh(id):
                 ),
             )
 
+            sheet[f"R31"] = "°C"
+            sheet[f"AE31"] = "°C"
+
             sheet.cell(
                 row=20,
                 column=2,
-                value=f"Địa điểm thực hiện: {dongho.vi_tri}" if dongho.vi_tri else "",
+                value=f"Địa điểm thực hiện: {dongho.noi_thuc_hien}" if dongho.noi_thuc_hien else "",
             )
 
             desired_height = row_heights * 28.35
@@ -207,7 +215,7 @@ def get_bb_kiem_dinh(id):
             # Bảng dl: start from row 32:
             du_lieu = dongho_dict['du_lieu_kiem_dinh']['du_lieu']
             hieu_sai_so = list(dongho_dict['du_lieu_kiem_dinh']['hieu_sai_so'])
-            titles = ["Q3","Q2","Q1"] if dongho.q3 else ['Qn', "Qt", "Qmin"]
+            titles = ["Q3","Q2","Q1"] if dongho.q3 else ['Qn', "Qt", "Qmin"] 
 
             black_solid = Side(style="thin", color="000000")   # Viền liền màu đen (mỏng)
             black_dotted = Side(style="dotted", color="000000")
@@ -215,42 +223,78 @@ def get_bb_kiem_dinh(id):
             start_row = 32
             for index, ll in enumerate(titles):
                 tmp_start_row = start_row
+                if ll == "Q1" or  ll == "Qmin":
+                    ll_display = "I"
+                elif ll == "Q2" or  ll == "Qt":
+                    ll_display = "II"
+                elif ll == "Q3" or  ll == "Qn":
+                    ll_display = "III"
+                else:
+                    ll_display = ll
+
                 dl_ll = du_lieu[ll]
                 lan_chay = dict(dl_ll['lan_chay'])
                 #merge cell
-                sheet[f"B{start_row}"] = ll    
-                sheet[f"D{start_row}"] = dl_ll['value']    
-                sheet[f"AJ{start_row}"] = hieu_sai_so[index]['hss']
+                sheet[f"B{start_row}"] = ll_display
+                
+                sheet[f"D{start_row}"] = (0.3 * (float(dl_ll['value']) if dl_ll['value'] else 0.0)) if ll == "Q3" else dl_ll['value']
+                # sheet[f"AJ{start_row}"] = round(hieu_sai_so[index]['hss'], 1)
                 sheet.merge_cells(f"B{start_row}:C{start_row + len(lan_chay) - 1}")    #title ll
                 sheet.merge_cells(f"D{start_row}:F{start_row + len(lan_chay) - 1}")    #value ll
                 sheet.merge_cells(f"AJ{start_row}:AL{start_row + len(lan_chay) - 1}")  #hss
 
+                hss = None
+                tmp_start_row = start_row
                 for key, val in lan_chay.items():
                     sheet.merge_cells(f"G{start_row}:J{start_row}")
                     sheet[f"G{start_row}"] = val['V1']
                     sheet.merge_cells(f"K{start_row}:N{start_row}")
                     sheet[f"K{start_row}"] = val['V2']
                     sheet.merge_cells(f"O{start_row}:Q{start_row}")
-                    sheet[f"O{start_row}"] = val['V2'] - val['V1']
+                    try:
+                        v1 = float(val['V1']) if val['V1'] else 0.0
+                        v2 = float(val['V2']) if val['V2'] else 0.0
+                        sheet[f"O{start_row}"] = v2 - v1 
+                    except ValueError:
+                        sheet[f"O{start_row}"] = "Lỗi"
                     sheet.merge_cells(f"R{start_row}:S{start_row}")
                     sheet[f"R{start_row}"] = val['Tdh']
-
                     sheet.merge_cells(f"T{start_row}:W{start_row}")
                     sheet[f"T{start_row}"] = val['Vc1']
                     sheet.merge_cells(f"X{start_row}:AA{start_row}")
                     sheet[f"X{start_row}"] = val['Vc2']
                     sheet.merge_cells(f"AB{start_row}:AD{start_row}")
-                    sheet[f"AB{start_row}"] = val['Vc2'] - val['Vc1']
+
+                    try:
+                        vc2 = float(val['Vc2']) if val['Vc2'] else 0.0
+                        vc1 = float(val['Vc1']) if val['Vc1'] else 0.0
+                        sheet[f"AB{start_row}"] = vc2 - vc1
+                    except ValueError:
+                        sheet[f"O{start_row}"] = "Lỗi"
+
                     sheet.merge_cells(f"AE{start_row}:AF{start_row}")
                     sheet[f"AE{start_row}"] = val['Tc']
 
                     sheet.merge_cells(f"AG{start_row}:AI{start_row}")
-                    du_lieu_instance = DuLieuMotLanChay(val['V1'], val['V2'], val['Vc1'], val['Vc2'])
-                    sai_so = get_sai_so_dong_ho(du_lieu_instance)
+                    try:
+                        v1 = float(val['V1']) if val['V1'] not in [None, ''] else 0.0
+                        v2 = float(val['V2']) if val['V2'] not in [None, ''] else 0.0
+                        vc1 = float(val['Vc1']) if val['Vc1'] not in [None, ''] else 0.0
+                        vc2 = float(val['Vc2']) if val['Vc2'] not in [None, ''] else 0.0
+
+                        du_lieu_instance = DuLieuMotLanChay(v1, v2, vc1, vc2)
+                    except ValueError as err:
+                        print(err)
+                        du_lieu_instance = DuLieuMotLanChay(0.0, 0.0, 0.0, 0.0)
+                        
+                    if hss is None:
+                        hss = round(get_sai_so_dong_ho(du_lieu_instance), 1)
+                    else:
+                        hss -= round(get_sai_so_dong_ho(du_lieu_instance), 1)
+                    sai_so = round(get_sai_so_dong_ho(du_lieu_instance), 1)
                     sheet[f"AG{start_row}"] = sai_so if sai_so is not None else "Lỗi"
                     start_row += 1
-
-                
+                sheet[f"AJ{tmp_start_row}"] = hss or round(hieu_sai_so[index]['hss'], 1)
                             
                 # Tạo viền chấm cho toàn bộ vùng B2:AL3
                 for row in sheet.iter_rows(min_row=tmp_start_row, max_row=tmp_start_row + len(lan_chay) - 1, min_col=2, max_col=38):
@@ -319,6 +363,7 @@ def get_bb_kiem_dinh(id):
 
             sheet[f"X{start_row}"] = "Người soát lại"
             sheet.merge_cells(f"X{start_row}:AF{start_row}") 
+            sheet[f"W{start_row + 4}"] = str(dongho_dict['nguoi_soat_lai']).upper() if dongho_dict['nguoi_soat_lai'] else ""
             sheet.merge_cells(f"W{start_row + 4}:AG{start_row + 4}")  
 
             # TODO: Save
@@ -328,7 +373,7 @@ def get_bb_kiem_dinh(id):
     except NotFound:
         return jsonify({"msg": "Id không hợp lệ!"}), 404
     except Exception as e:
-        print(e)
+        print("BB: " + str(e))
         return jsonify({"msg": f"Đã có lỗi xảy ra: {str(e)}"}), 500
 
 
@@ -351,17 +396,12 @@ def get_gcn_kiem_dinh(id):
             return jsonify({"msg": "Đồng hồ không đạt tiêu chuẩn xuất biên bản!"}), 422
         
         fileName = (
-            "KĐ_GCN_"
-            + (dongho.ten_dong_ho or "")
-            + (dongho.dn or "")
-            + (dongho.ccx or "")
-            + (dongho.q3 or "")
-            + (dongho.r or "")
-            + (dongho.qn or "")
-            + (dongho.seri_sensor or "")
-            + (dongho.seri_chi_thi or "")
-            + (dongho.kieu_sensor or "")
-            + (dongho.kieu_chi_thi or "")
+            "KĐ_GCN"
+            + ("_" + dongho.so_giay_chung_nhan if dongho.so_giay_chung_nhan else "")
+            + ("_" + dongho.ten_khach_hang if dongho.ten_khach_hang else "")
+            + ("_" + dongho.ten_dong_ho if dongho.ten_dong_ho else "")
+            + ("_" + dongho.dn if dongho.dn else "")
+            + ("_" + dongho.ngay_thuc_hien.strftime("%d-%m-%Y") if dongho.ngay_thuc_hien else "")
             + ".xlsx"
         )
 
@@ -391,12 +431,15 @@ def get_gcn_kiem_dinh(id):
             sheet[f"O22"] = "Hệ số K: " if dongho.k_factor else ""
             sheet[f"S22"] = dongho.k_factor if dongho.k_factor else ""
             sheet[f"H23"] = dongho.co_so_su_dung if dongho.co_so_su_dung else ""
-            sheet[f"H25"] = dongho.vi_tri if dongho.vi_tri else ""
-            # sheet[f"H27"] = dongho.dia_chi_noi_su_dung if dongho.dia_chi_noi_su_dung else ""            #TODO
+            sheet[f"H25"] = dongho.noi_su_dung if dongho.noi_su_dung else ""
+            sheet[f"H27"] = dongho.vi_tri if dongho.vi_tri else ""           
             sheet[f"H27"] = "" 
             sheet[f"L28"] = dongho.phuong_phap_thuc_hien if dongho.phuong_phap_thuc_hien else ""
-            # sheet[f"L29"] = dongho.quy_trinh if dongho.quy_trinh else ""                                #TODO
-            sheet[f"L29"] = ""
+            try:
+                sheet[f"L29"] = PP_THUC_HIEN[dongho.phuong_phap_thuc_hien] if dongho.phuong_phap_thuc_hien else ""    
+            except Exception as err:
+                print(err)
+                pass               
             sheet[f"F32"] = dongho.so_tem if dongho.so_tem else ""
             sheet[f"Z32"] = dongho.hieu_luc_bien_ban.strftime("%d/%m/%Y") if dongho.hieu_luc_bien_ban else ""
             sheet[f"S35"] = f"Hà Nội, ngày {dongho.ngay_thuc_hien.strftime('%d')} tháng {dongho.ngay_thuc_hien.strftime('%m')} năm {dongho.ngay_thuc_hien.strftime('%Y')}" if dongho.ngay_thuc_hien else ""
@@ -415,6 +458,6 @@ def get_gcn_kiem_dinh(id):
     except NotFound:
         return jsonify({"msg": "Id không hợp lệ!"}), 404
     except Exception as e:
-        print(e)
+        print("GCN: " + str(e))
         return jsonify({"msg": f"Đã có lỗi xảy ra: {str(e)}"}), 500
 

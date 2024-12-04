@@ -11,9 +11,13 @@ pdm_bp = Blueprint("pdm", __name__)
 def get_pdms():
     query = PDM.query
 
-    ma_tim_dong_ho_pdm = request.args.get("ma_tim_dong_ho_pdm")
-    if ma_tim_dong_ho_pdm:
-        query = query.filter(PDM.ma_tim_dong_ho_pdm.ilike(f"%{ma_tim_dong_ho_pdm}%"))
+    # ma_tim_dong_ho_pdm = request.args.get("ma_tim_dong_ho_pdm")
+    # if ma_tim_dong_ho_pdm:
+    #     query = query.filter(PDM.ma_tim_dong_ho_pdm.ilike(f"%{ma_tim_dong_ho_pdm}%"))
+
+    ten_dong_ho = request.args.get("ten_dong_ho")
+    if ten_dong_ho:
+        query = query.filter(PDM.ten_dong_ho.ilike(f"%{ten_dong_ho}%"))
 
     so_qd_pdm = request.args.get("so_qd_pdm")
     if so_qd_pdm:
@@ -23,7 +27,7 @@ def get_pdms():
     if ngay_qd_pdm_from:
         query = query.filter(PDM.ngay_qd_pdm >= ngay_qd_pdm_from)
 
-    ngay_qd_pdm_to = request.args.get("ngay_qd_pdm_to")  # 2024-08-13 00:00:00
+    ngay_qd_pdm_to = request.args.get("ngay_qd_pdm_to")
     if ngay_qd_pdm_to:
         query = query.filter(PDM.ngay_qd_pdm <= ngay_qd_pdm_to)
 
@@ -34,6 +38,22 @@ def get_pdms():
         else:
             query = query.filter(PDM.ngay_het_han < db.func.current_date())
 
+    dn = request.args.get("dn")
+    if dn:
+        query = query.filter(PDM.dn.ilike(f"%{dn}%"))
+
+    ccx = request.args.get("ccx")
+    if ccx:
+        query = query.filter(PDM.ccx.ilike(f"%{ccx}%"))
+
+    kieu_sensor = request.args.get("kieu_sensor")
+    if kieu_sensor:
+        query = query.filter(PDM.kieu_sensor.ilike(f"%{kieu_sensor}%"))
+
+    transmitter = request.args.get("transmitter")
+    if transmitter:
+        query = query.filter(PDM.transmitter.ilike(f"%{transmitter}%"))
+
     pdms = query.all()
 
     result = [pdm.to_dict() for pdm in pdms]
@@ -43,12 +63,9 @@ def get_pdms():
 @jwt_required()
 def create_pdm():
     data = request.get_json()
-
-    # Check if PDM with the same ma_tim_dong_ho_pdm already exists
     existing_pdm = PDM.query.filter_by(ma_tim_dong_ho_pdm=data.get("ma_tim_dong_ho_pdm")).first()
     if existing_pdm:
         return jsonify({"msg": f"Mã {data.get('ma_tim_dong_ho_pdm')} đã tồn tại!", "data": existing_pdm.to_dict()}), 400
-
     new_pdm = PDM(
         ma_tim_dong_ho_pdm=data.get("ma_tim_dong_ho_pdm"),
         ten_dong_ho=data.get("ten_dong_ho"),
@@ -67,11 +84,64 @@ def create_pdm():
         ngay_het_han=data.get("ngay_het_han"),
         anh_pdm=data.get("anh_pdm"),
     )
-
     db.session.add(new_pdm)
     db.session.commit()
-
     return jsonify(new_pdm.to_dict()), 201
+
+@pdm_bp.route("", methods=["PUT"])
+@jwt_required()
+def update_pdm():
+    try: 
+        data = request.get_json()
+        pdm_id = data.get("id") 
+        existing_pdm = PDM.query.get(pdm_id) 
+
+        if existing_pdm:
+            existing_pdm.ten_dong_ho = data.get("ten_dong_ho")
+            existing_pdm.noi_san_xuat = data.get("noi_san_xuat")
+            existing_pdm.dn = data.get("dn")
+            existing_pdm.ccx = data.get("ccx")
+            existing_pdm.kieu_sensor = data.get("kieu_sensor")
+            existing_pdm.transmitter = data.get("transmitter")
+            existing_pdm.qn = data.get("qn")
+            existing_pdm.q3 = data.get("q3")
+            existing_pdm.r = data.get("r")
+            existing_pdm.don_vi_pdm = data.get("don_vi_pdm")
+            existing_pdm.dia_chi = data.get("dia_chi")
+            existing_pdm.so_qd_pdm = data.get("so_qd_pdm")
+            existing_pdm.ngay_qd_pdm = data.get("ngay_qd_pdm")
+            existing_pdm.ngay_het_han = data.get("ngay_het_han")
+            existing_pdm.anh_pdm = data.get("anh_pdm")
+
+            db.session.commit() 
+            return jsonify(existing_pdm.to_dict()), 200 
+        else:  
+            new_pdm = PDM(
+                ma_tim_dong_ho_pdm=data.get("ma_tim_dong_ho_pdm"),
+                ten_dong_ho=data.get("ten_dong_ho"),
+                noi_san_xuat=data.get("noi_san_xuat"),
+                dn=data.get("dn"),
+                ccx=data.get("ccx"),
+                kieu_sensor=data.get("kieu_sensor"),
+                transmitter=data.get("transmitter"),
+                qn=data.get("qn"),
+                q3=data.get("q3"),
+                r=data.get("r"),
+                don_vi_pdm=data.get("don_vi_pdm"),
+                dia_chi=data.get("dia_chi"),
+                so_qd_pdm=data.get("so_qd_pdm"),
+                ngay_qd_pdm=data.get("ngay_qd_pdm"),
+                ngay_het_han=data.get("ngay_het_han"),
+                anh_pdm=data.get("anh_pdm"),
+            )
+            db.session.add(new_pdm)
+            db.session.commit()
+            return jsonify(new_pdm.to_dict()), 201
+
+    except Exception as e: 
+        db.session.rollback()  
+        return jsonify({"msg": "Đã xảy ra lỗi khi cập nhật hoặc tạo mới PDM!", "error": str(e)}), 500 
+
 
 @pdm_bp.route("/id/<int:id>", methods=["GET"])
 @jwt_required()
@@ -82,10 +152,23 @@ def get_pdm(id):
 @pdm_bp.route("/so_qd_pdm/<string:so_qd_pdm>", methods=["GET"])
 @jwt_required()
 def get_so_qd_pdm(so_qd_pdm):
-    pdm = PDM.query.filter_by(so_qd_pdm=so_qd_pdm).first_or_404()
-    print("pdm: ", pdm)
-    return jsonify(pdm.to_dict()), 200
-
+    try:
+        pdm_identifier = so_qd_pdm.split("-")[0].strip() 
+        year = so_qd_pdm.split("-")[1].strip() 
+        print(f"Identifier: {pdm_identifier}, Year: {year}")
+        query = PDM.query.filter(
+            PDM.so_qd_pdm == pdm_identifier,
+            db.extract('year', PDM.ngay_qd_pdm) == int(year) 
+        )
+        print(query)
+        pdm = query.first() 
+        if pdm is None:
+            return jsonify({"msg": "No matching PDM found."}), 404
+        return jsonify(pdm.to_dict()), 200 
+    except Exception as e:
+        print(e)
+        return jsonify({"msg": "Đã xảy ra lỗi khi lấy thông tin PDM!", "error": str(e)}), 500  
+    
 @pdm_bp.route("/ma_tim_dong_ho_pdm/<string:ma_tim_dong_ho_pdm>", methods=["GET"])
 @jwt_required()
 def get_ma_tim_dong_ho_pdm(ma_tim_dong_ho_pdm):
