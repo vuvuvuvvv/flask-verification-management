@@ -1,69 +1,74 @@
+import os
 from sqlalchemy import Integer
 from app.extensions import db
 from werkzeug.security import generate_password_hash, check_password_hash
 from flask_login import UserMixin
-from datetime import datetime
+from datetime import datetime, timedelta
 from app.utils.url_encrypt import encode, decode
+from flask_jwt_extended import (
+    create_access_token,
+    decode_token
+)
 
 
-# class Permission:
-#     VIEW = 1
-#     MANAGE = 2
-#     DIRECTOR = 4
-#     ADMIN = 8
-#     SUPERADMIN = 16
+class Permission:
+    VIEW = 1
+    MANAGE = 2
+    DIRECTOR = 4
+    ADMIN = 8
+    SUPERADMIN = 16
 
 
-# class Role(db.Model):
-#     __tablename__ = 'roles'
-#     id = db.Column(db.Integer, primary_key=True)
-#     name = db.Column(db.String(64), unique=True)
-#     default = db.Column(db.Boolean, default=False, index=True)
-#     permissions = db.Column(db.Integer)
-#     users = db.relationship('User', backref='role', lazy='dynamic')
+class Role(db.Model):
+    __tablename__ = 'roles'
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(64), unique=True)
+    default = db.Column(db.Boolean, default=False, index=True)
+    permissions = db.Column(db.Integer)
+    users = db.relationship('User', backref='role', lazy='dynamic')
 
-#     def __init__(self, **kwargs):
-#         super(Role, self).__init__(**kwargs)
-#         if self.permissions is None:
-#             self.permissions = 0
+    def __init__(self, **kwargs):
+        super(Role, self).__init__(**kwargs)
+        if self.permissions is None:
+            self.permissions = 0
 
-#     @staticmethod
-#     def insert_roles():
-#         roles = {
-#             'User': (Permission.VIEW, None),
-#             'Manager': (Permission.VIEW , Permission.MANAGE),
-#             'Director': (Permission.VIEW , Permission.MANAGE , Permission.DIRECTOR),
-#             'Administrator': (Permission.VIEW , Permission.MANAGE , Permission.DIRECTOR , Permission.ADMIN),
-#             'SuperAdministrator':(Permission.VIEW , Permission.MANAGE , Permission.DIRECTOR , Permission.ADMIN , Permission.SUPERADMIN),
-#         }
-#         default_role = 'User'
-#         for r in roles:
-#             role = Role.query.filter_by(name=r).first()
-#             if role is None:
-#                 role = Role(name=r)
-#             role.reset_permissions()
-#             for perm in (roles[r]):
-#                 if perm: role.add_permission(perm)
-#             role.default = (role.name == default_role)
-#             db.session.add(role)
-#         db.session.commit()
+    @staticmethod
+    def insert_roles():
+        roles = {
+            'User': (Permission.VIEW, None),
+            'Manager': (Permission.VIEW , Permission.MANAGE),
+            'Director': (Permission.VIEW , Permission.MANAGE , Permission.DIRECTOR),
+            'Administrator': (Permission.VIEW , Permission.MANAGE , Permission.DIRECTOR , Permission.ADMIN),
+            'SuperAdministrator':(Permission.VIEW , Permission.MANAGE , Permission.DIRECTOR , Permission.ADMIN , Permission.SUPERADMIN),
+        }
+        default_role = 'User'
+        for r in roles:
+            role = Role.query.filter_by(name=r).first()
+            if role is None:
+                role = Role(name=r)
+            role.reset_permissions()
+            for perm in (roles[r]):
+                if perm: role.add_permission(perm)
+            role.default = (role.name == default_role)
+            db.session.add(role)
+        db.session.commit()
 
-#     def add_permission(self, perm):
-#         if not self.has_permission(perm):
-#             self.permissions += perm
+    def add_permission(self, perm):
+        if not self.has_permission(perm):
+            self.permissions += perm
 
-#     def remove_permission(self, perm):
-#         if self.has_permission(perm):
-#             self.permissions -= perm
+    def remove_permission(self, perm):
+        if self.has_permission(perm):
+            self.permissions -= perm
 
-#     def reset_permissions(self):
-#         self.permissions = 0
+    def reset_permissions(self):
+        self.permissions = 0
 
-#     def has_permission(self, perm):
-#         return self.permissions & perm == perm
+    def has_permission(self, perm):
+        return self.permissions & perm == perm
 
-#     def __repr__(self):
-#         return '<Role %r>' % self.name
+    def __repr__(self):
+        return '<Role %r>' % self.name
 
 
 class User(UserMixin, db.Model):
@@ -71,11 +76,21 @@ class User(UserMixin, db.Model):
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(64), index=True, unique=True, nullable=False)
     fullname = db.Column(
-        db.String(100), index=True, nullable=False, default="404 Notfound"
+        db.String(100), index=True, nullable=False, default="Unknown"
     )
     email = db.Column(db.String(120), index=True, unique=True, nullable=False)
     password_hash = db.Column(db.String(256), nullable=False)
-    role = db.Column(db.String(10), default="USER")
+    role_id = db.Column(db.Integer, db.ForeignKey('roles.id'))
+    confirmed = db.Column(db.Boolean, default=False)
+
+    def __init__(self, **kwargs):
+        super(User, self).__init__(**kwargs)
+        if self.role is None:
+            self.role = Role.query.filter_by(default=True).first()
+            # if self.email == os.environ.get['ADMIN_MAIL']:
+            #     self.role = Role.query.filter_by(name='Administrator').first()
+            # if self.role is None:
+            #     self.role = Role.query.filter_by(default=True).first()
 
     def set_email(self, email):
         self.email = email
@@ -89,13 +104,38 @@ class User(UserMixin, db.Model):
     def check_password(self, password):
         return check_password_hash(self.password_hash, password)
 
+    def can(self, perm):
+        return self.role is not None and self.role.has_permission(perm)
+
+    def generate_confirmation_token(self, exp_minutes=5):
+        token = create_access_token(identity={"confirm_id":self.id}, expires_delta=timedelta(minutes=exp_minutes))
+        return token
+
+    def confirm(self, token):
+        try:
+            decoded_data = decode_token(token)
+            confirm_id = decoded_data.get('sub', {}).get('confirm_id')
+            if confirm_id != self.id:
+                return False
+            self.confirmed = True
+            db.session.add(self)
+            db.session.commit()
+            return True
+        except Exception as e:
+            print(f"Token confirmation error: {e}")
+            return False
+
+    def is_administrator(self):
+        return self.can(Permission.ADMIN)
+
     def to_dict(self):
         return {
             "id": self.id,
             "username": self.username,
             "fullname": self.fullname,
             "email": self.email,
-            "role": self.role,
+            "role": self.role.name if self.role.name else "Unknown" ,
+            "confirmed": self.confirmed,
         }
 
 

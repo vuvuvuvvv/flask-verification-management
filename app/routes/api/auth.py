@@ -34,13 +34,15 @@ def register():
     username = data.get("username")
     password = data.get("password")
     email = data.get("email")
-    role = "USER"
+
     if User.query.filter_by(username=username).first():
         return jsonify({"msg": "Người dùng đã tồn tại"}), 400
     if User.query.filter_by(email=email).first():
         return jsonify({"msg": "Email đã tồn tại"}), 400
-    new_user = User(username=username, email=email, role=role)
+    
+    new_user = User(username=username, email=email)
     new_user.set_password(password)
+    
     db.session.add(new_user)
     db.session.commit()
 
@@ -69,7 +71,6 @@ def login():
     data = request.get_json()
     username = data.get("username")
     password = data.get("password")
-    remember = data.get("remember")
 
     # user = User.query.filter_by(username=username).first()
     # Check if the username is an email
@@ -217,7 +218,6 @@ def reset_password():
     old_password = data.get("old_password")
 
     # get email from jwt
-    print(get_jwt_identity())
     email = get_jwt_identity()["email"]
 
     user = User.query.filter_by(email=email).first()
@@ -235,6 +235,7 @@ def reset_password():
     access_token = create_access_token(
         identity=user.to_dict(), expires_delta=timedelta(minutes=int(os.environ.get("EXPIRE_TIME_ACT")))
     )
+
     refresh_token = create_refresh_token(
         identity=user.to_dict(), expires_delta=timedelta(days=int(os.environ.get("EXPIRE_TIME_RFT")))
     )
