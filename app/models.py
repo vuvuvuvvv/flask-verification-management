@@ -5,10 +5,7 @@ from werkzeug.security import generate_password_hash, check_password_hash
 from flask_login import UserMixin
 from datetime import datetime, timedelta
 from app.utils.url_encrypt import encode, decode
-from flask_jwt_extended import (
-    create_access_token,
-    decode_token
-)
+from flask_jwt_extended import create_access_token, decode_token
 
 
 class Permission:
@@ -20,12 +17,12 @@ class Permission:
 
 
 class Role(db.Model):
-    __tablename__ = 'roles'
+    __tablename__ = "roles"
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(64), unique=True)
     default = db.Column(db.Boolean, default=False, index=True)
     permissions = db.Column(db.Integer)
-    users = db.relationship('User', backref='role', lazy='dynamic')
+    users = db.relationship("User", backref="role", lazy="dynamic")
 
     def __init__(self, **kwargs):
         super(Role, self).__init__(**kwargs)
@@ -35,21 +32,33 @@ class Role(db.Model):
     @staticmethod
     def insert_roles():
         roles = {
-            'User': (Permission.VIEW, None),
-            'Manager': (Permission.VIEW , Permission.MANAGE),
-            'Director': (Permission.VIEW , Permission.MANAGE , Permission.DIRECTOR),
-            'Administrator': (Permission.VIEW , Permission.MANAGE , Permission.DIRECTOR , Permission.ADMIN),
-            'SuperAdministrator':(Permission.VIEW , Permission.MANAGE , Permission.DIRECTOR , Permission.ADMIN , Permission.SUPERADMIN),
+            "User": (Permission.VIEW, None),
+            "Manager": (Permission.VIEW, Permission.MANAGE),
+            "Director": (Permission.VIEW, Permission.MANAGE, Permission.DIRECTOR),
+            "Administrator": (
+                Permission.VIEW,
+                Permission.MANAGE,
+                Permission.DIRECTOR,
+                Permission.ADMIN,
+            ),
+            "SuperAdministrator": (
+                Permission.VIEW,
+                Permission.MANAGE,
+                Permission.DIRECTOR,
+                Permission.ADMIN,
+                Permission.SUPERADMIN,
+            ),
         }
-        default_role = 'User'
+        default_role = "User"
         for r in roles:
             role = Role.query.filter_by(name=r).first()
             if role is None:
                 role = Role(name=r)
             role.reset_permissions()
-            for perm in (roles[r]):
-                if perm: role.add_permission(perm)
-            role.default = (role.name == default_role)
+            for perm in roles[r]:
+                if perm:
+                    role.add_permission(perm)
+            role.default = role.name == default_role
             db.session.add(role)
         db.session.commit()
 
@@ -68,19 +77,17 @@ class Role(db.Model):
         return self.permissions & perm == perm
 
     def __repr__(self):
-        return '<Role %r>' % self.name
+        return "<Role %r>" % self.name
 
 
 class User(UserMixin, db.Model):
     __tablename__ = "user"
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(64), index=True, unique=True, nullable=False)
-    fullname = db.Column(
-        db.String(100), index=True, nullable=False, default="Unknown"
-    )
+    fullname = db.Column(db.String(100), index=True, nullable=False, default="Unknown")
     email = db.Column(db.String(120), index=True, unique=True, nullable=False)
     password_hash = db.Column(db.String(256), nullable=False)
-    role_id = db.Column(db.Integer, db.ForeignKey('roles.id'))
+    role_id = db.Column(db.Integer, db.ForeignKey("roles.id"))
     confirmed = db.Column(db.Boolean, default=False)
 
     def __init__(self, **kwargs):
@@ -108,13 +115,16 @@ class User(UserMixin, db.Model):
         return self.role is not None and self.role.has_permission(perm)
 
     def generate_confirmation_token(self, exp_minutes=5):
-        token = create_access_token(identity={"confirm_id":self.id}, expires_delta=timedelta(minutes=exp_minutes))
+        token = create_access_token(
+            identity={"confirm_id": self.id},
+            expires_delta=timedelta(minutes=exp_minutes),
+        )
         return token
 
     def confirm(self, token):
         try:
             decoded_data = decode_token(token)
-            confirm_id = decoded_data.get('sub', {}).get('confirm_id')
+            confirm_id = decoded_data.get("sub", {}).get("confirm_id")
             if confirm_id != self.id:
                 return False
             self.confirmed = True
@@ -134,7 +144,7 @@ class User(UserMixin, db.Model):
             "username": self.username,
             "fullname": self.fullname,
             "email": self.email,
-            "role": self.role.name if self.role.name else "Unknown" ,
+            "role": self.role.name if self.role.name else "Unknown",
             "confirmed": self.confirmed,
         }
 
@@ -272,6 +282,7 @@ class DongHo(db.Model):
     do_am = db.Column(db.String(255), nullable=True)
     du_lieu_kiem_dinh = db.Column(db.Text, nullable=True)
     so_giay_chung_nhan = db.Column(db.String(255), nullable=True)
+    update_history = db.Column(db.Text, nullable=True)
 
     def __init__(
         self,
@@ -309,6 +320,7 @@ class DongHo(db.Model):
         du_lieu_kiem_dinh,
         hieu_luc_bien_ban,
         so_giay_chung_nhan,
+        update_history,
     ):
         self.group_id = group_id
         self.ten_dong_ho = ten_dong_ho
@@ -344,6 +356,7 @@ class DongHo(db.Model):
         self.du_lieu_kiem_dinh = du_lieu_kiem_dinh
         self.hieu_luc_bien_ban = hieu_luc_bien_ban
         self.so_giay_chung_nhan = so_giay_chung_nhan
+        self.update_history = update_history
 
     def to_dict(self):
         return {
@@ -382,6 +395,7 @@ class DongHo(db.Model):
             "du_lieu_kiem_dinh": self.du_lieu_kiem_dinh,
             "hieu_luc_bien_ban": self.hieu_luc_bien_ban,
             "so_giay_chung_nhan": self.so_giay_chung_nhan,
+            "update_history": self.update_history,
         }
 
 
@@ -392,13 +406,14 @@ class NhomDongHoPayment(db.Model):
     is_paid = db.Column(db.Boolean, default=False, nullable=False)
     paid_date = db.Column(db.DateTime, nullable=True)
     payment_collector = db.Column(db.String(50), nullable=True)
+    update_history = db.Column(db.Text, nullable=True)
 
-    def __init__(self, group_id, is_paid=False, paid_date=None, payment_collector=None):
+    def __init__(self, group_id, is_paid=False, paid_date=None, payment_collector=None, update_history = None):
         self.group_id = group_id
         self.is_paid = is_paid
         self.paid_date = paid_date
         self.payment_collector = payment_collector
-        # self.notes = notes
+        self.update_history = update_history
 
     def to_dict(self):
         return {
@@ -407,4 +422,5 @@ class NhomDongHoPayment(db.Model):
             "is_paid": self.is_paid,
             "paid_date": self.paid_date,
             "payment_collector": self.payment_collector,
+            "update_history": self.update_history,
         }

@@ -1,7 +1,7 @@
 from datetime import datetime, timedelta
 import os
 from flask import Blueprint, jsonify, request
-from flask_jwt_extended import jwt_required
+from flask_jwt_extended import jwt_required, get_jwt_identity
 from sqlalchemy import and_, or_, cast, Integer
 from app.models import DongHo, PDM, NhomDongHoPayment
 from app import db
@@ -307,9 +307,22 @@ def create_dongho():
             hieu_luc_bien_ban=hieu_luc_bien_ban,
             so_giay_chung_nhan=data.get("so_giay_chung_nhan"),
         )
-        
-        # if(data.get("so_giay_chung_nhan") == "123334"):
-        #     err = 100 / 0
+
+        current_user_identity = get_jwt_identity()
+
+        history_entry = {
+            "content": "Tạo mới đồng hồ.",
+            "updated_by": f"{current_user_identity['fullname']} - {current_user_identity['email']} - {current_user_identity['role']}",
+            "updated_at": datetime.utcnow().isoformat(),
+        }
+
+        if new_dongho.update_history:
+            history = json.loads(new_dongho.update_history)
+        else:
+            history = []
+
+        history.append(history_entry)
+        new_dongho.update_history = json.dumps(history)
 
         db.session.add(new_dongho)
         db.session.commit()
@@ -385,9 +398,43 @@ def update_dongho(id):
                 jsonify({"msg": "Serial number hoặc Serial chỉ thị đã tồn tại!"}),
                 400,
             )
+        field_titles = {
+            "ten_dong_ho": "Tên đồng hồ",
+            "phuong_tien_do": "Tên phương tiện đo",
+            "kieu_thiet_bi": "Kiểu thiết bị",
+            "seri_chi_thi": "Serial chỉ thị",
+            "seri_sensor": "Serial sensor",
+            "kieu_chi_thi": "Kiểu chỉ thị",
+            "kieu_sensor": "Kiểu sensor",
+            "so_tem": "Số Tem",
+            "co_so_san_xuat": "Cơ sở sản xuất",
+            "nam_san_xuat": "Năm sản xuất",
+            "dn": "Đường kính danh định (DN)",
+            "d": "Độ chia nhỏ nhất (d)",
+            "ccx": "Cấp chính xác",
+            "q3": "Q3",
+            "r": "Tỷ số Q3/Q1 (R)",
+            "qn": "Qn",
+            "k_factor": "Hệ số K",
+            "so_qd_pdm": "Ký hiệu PDM/Số quyết định PDM",
+            "ten_khach_hang": "Tên khách hàng",
+            "co_so_su_dung": "Đơn vị phê duyệt mẫu",
+            "phuong_phap_thuc_hien": "Phương pháp thực hiện",
+            "noi_su_dung": "Nơi sử dụng",
+            "vi_tri": "Địa chỉ nơi sử dụng",
+            "nhiet_do": "Nhiệt độ",
+            "do_am": "Độ ẩm",
+            "du_lieu_kiem_dinh": "Dữ liệu kiểm định",
+            "hieu_luc_bien_ban": "Hiệu lực biên bản",
+            "so_giay_chung_nhan": "Số giấy chứng nhận",
+            "noi_thuc_hien": "Nơi thực hiện",
+            "ngay_thuc_hien": "Ngày thực hiện",
+            "nguoi_kiem_dinh": "Người kiểm định",
+            "nguoi_soat_lai": "Người soát lại",
+            "chuan_thiet_bi_su_dung": "Chuẩn thiết bị sử dụng",
+        }
 
         # Update fields
-        # dongho.group_id = data.get("group_id")
         dongho.ten_dong_ho = data.get("ten_dong_ho")
         dongho.phuong_tien_do = data.get("phuong_tien_do")
         dongho.seri_chi_thi = data.get("seri_chi_thi")
@@ -412,15 +459,42 @@ def update_dongho(id):
         dongho.chuan_thiet_bi_su_dung = data.get("chuan_thiet_bi_su_dung")
         dongho.nguoi_kiem_dinh = data.get("nguoi_kiem_dinh")
         dongho.nguoi_soat_lai = data.get("nguoi_soat_lai")
-        dongho.ngay_thuc_hien = data.get("ngay_thuc_hien")  # Use the parsed date
+        dongho.ngay_thuc_hien = data.get("ngay_thuc_hien")
         dongho.noi_su_dung = data.get("noi_su_dung")
         dongho.noi_thuc_hien = data.get("noi_thuc_hien")
         dongho.vi_tri = data.get("vi_tri")
         dongho.nhiet_do = data.get("nhiet_do")
         dongho.do_am = data.get("do_am")
-        dongho.du_lieu_kiem_dinh = data.get("du_lieu_kiem_dinh")  # Convert to JSON string
-        dongho.hieu_luc_bien_ban = hieu_luc_bien_ban
+        dongho.du_lieu_kiem_dinh = data.get("du_lieu_kiem_dinh")
+        dongho.hieu_luc_bien_ban = data.get("hieu_luc_bien_ban")
         dongho.so_giay_chung_nhan = data.get("so_giay_chung_nhan")
+
+        # Store original values and update fields
+        changed_fields = []
+        for key in field_titles.keys():
+            original_value = getattr(dongho, key)
+            new_value = data.get(key)
+            if original_value != new_value:
+                changed_fields.append(field_titles[key])
+                setattr(dongho, key, new_value)
+
+        current_user_identity = get_jwt_identity()
+
+        content = "Thay đổi giá trị: " + ", ".join(changed_fields)
+
+        history_entry = {
+            "content": content,
+            "updated_by": f"{current_user_identity['fullname']} - {current_user_identity['email']} - {current_user_identity['role']}",
+            "updated_at": datetime.utcnow().isoformat(),
+        }
+
+        if dongho.update_history:
+            history = json.loads(dongho.update_history)
+        else:
+            history = []
+
+        history.append(history_entry)
+        dongho.update_history = json.dumps(history)
 
         db.session.commit()
         if os.path.exists(bb_file_path):
@@ -571,6 +645,23 @@ def update_payment_status():
                 payment_collector=username
             )
             db.session.add(nhom_dongho_payment)
+            
+
+        current_user_identity = get_jwt_identity()
+
+        history_entry = {
+            "content": "Chuyển trạng thái " + "đã" if new_payment_status else "chưa" + " thanh toán.",
+            "updated_by": f"{current_user_identity['fullname']} - {current_user_identity['email']} - {current_user_identity['role']}",
+            "updated_at": datetime.utcnow().isoformat(),
+        }
+
+        if nhom_dongho_payment.update_history:
+            history = json.loads(nhom_dongho_payment.update_history)
+        else:
+            history = []
+
+        history.append(history_entry)
+        nhom_dongho_payment.update_history = json.dumps(history)
 
         db.session.commit()
 
