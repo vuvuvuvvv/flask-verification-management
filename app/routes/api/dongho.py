@@ -711,7 +711,7 @@ def update_payment_status():
         db.session.rollback()
         return jsonify({"msg": f"Đã có lỗi xảy ra! Hãy thử lại sau."}), 500
 
-
+# Lấy ra toàn bộ phân quyền của dongho
 @dongho_bp.route("/user-permissions/<string:id>", methods=["GET"])
 @jwt_required()
 def get_user_permissions(id):
@@ -776,7 +776,7 @@ def check_user_info_for_dongho_permissions(id, user_info):
             )
         ).first()
 
-        if existing_permission:
+        if existing_permission or existing_user.role.permissions == Permission.SUPERADMIN:
             return (
                 jsonify(
                     {
@@ -798,13 +798,12 @@ def check_user_info_for_dongho_permissions(id, user_info):
         print(e)
         return jsonify({"msg": "Đã có lỗi xảy ra! Hãy thử lại sau."}), 500
 
-
+# Lấy ra toàn bộ dongHo hợp lệ với vai trò người dùng (<= Admin)
+# SuperAdmin thì lấy ra toàn bộ: @dongho_bp.route("", methods=["GET"])
 @dongho_bp.route("/permissions/<string:username>", methods=["GET"])
 @jwt_required()
 def get_donghos_with_permission(username):
     try:
-        current_user_identity = get_jwt_identity()
-        print(current_user_identity["permission"])
 
         queryDHP = DongHoPermissions.query.filter(
             DongHoPermissions.username == username

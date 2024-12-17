@@ -15,7 +15,7 @@ from app.models import TokenBlacklist
 from app import db, login_manager
 from app.models import User
 from app.utils.jwt_helpers import clean_up_blacklist
-from app.utils.send_mail import send_reset_password_email
+from app.utils.send_mail import send_reset_password_email, send_verify_email
 from datetime import timedelta
 
 auth_bp = Blueprint("auth", __name__)
@@ -158,7 +158,7 @@ def profile():
 
 
 @auth_bp.route("/send-password-reset-token", methods=["POST"])
-def send_mail():
+def send_password_reset_mail():
     data = request.get_json()
     email = data.get("email")
     user = User.query.filter_by(email=email).first()
@@ -167,6 +167,24 @@ def send_mail():
     else:
         try:
             send_reset_password_email(email)
+            return jsonify({"msg": "Gửi email thành công!", "status": 200}), 200
+        except Exception as mail_err:
+            print(mail_err)
+            return (
+                jsonify({"msg": f"Đã có lỗi xảy ra! Hãy thử lại sau.", "status": 500}),
+                500,
+            )
+
+@auth_bp.route("/send-verify-token", methods=["POST"])
+def send_verify_mail():
+    data = request.get_json()
+    email = data.get("email")
+    user = User.query.filter_by(email=email).first()
+    if not user:
+        return jsonify({"msg": "Email không tồn tại!", "status": 404}), 404
+    else:
+        try:
+            send_verify_email(email)
             return jsonify({"msg": "Gửi email thành công!", "status": 200}), 200
         except Exception as mail_err:
             print(mail_err)

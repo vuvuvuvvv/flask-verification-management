@@ -144,7 +144,7 @@ class User(UserMixin, db.Model):
             "fullname": self.fullname,
             "email": self.email,
             "role": self.role.name if self.role.name else "Unknown",
-            "confirmed": self.confirmed,
+            "confirmed": 1 if self.confirmed else 0,
             "permission" :  self.role.permissions if self.role.permissions else 0,
         }
 
