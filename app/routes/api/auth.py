@@ -203,7 +203,6 @@ def reset_email():
 
     # get user from jwt
     current_user_identity = get_jwt_identity()
-    print(current_user_identity)
 
     user = User.query.filter_by(username=current_user_identity["username"]).first()
     if not user:
@@ -280,3 +279,34 @@ def reset_password():
         ),
         200,
     )
+
+@auth_bp.route("/verify", methods=["POST"])
+@jwt_required()
+def verify():
+    try:
+        current_user_identity = get_jwt_identity()
+        email = current_user_identity['email']
+        user = User.query.filter_by(email=email).first()
+        if not user:
+            return jsonify({"msg": "Không tìm thấy người dùng!"}), 404
+        user.confirmed = True
+        
+        clean_up_blacklist()
+        jti = get_jwt()["jti"]  # Get JWT ID
+        expires = get_jwt()["exp"]  # Get expiration time
+        blacklist_entry = TokenBlacklist(
+            jti=jti, expires_at=datetime.fromtimestamp(expires)
+        )
+        db.session.add(blacklist_entry)
+        db.session.commit()
+        return (
+            jsonify(
+                user=user.to_dict(),
+                msg="Xác thực thành công!",
+            ),
+            200,
+        )
+    except Exception as e:
+        print(e)
+        db.session.rollback()  # Rollback in case of any error
+        return jsonify({"msg": "Đã xảy ra lỗi trong quá trình xác thực.", "error": str(e)}), 500
