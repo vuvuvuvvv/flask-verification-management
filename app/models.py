@@ -8,8 +8,7 @@ from app.utils.url_encrypt import encode, decode
 from flask_jwt_extended import create_access_token, decode_token
 
 class Permission:
-    VIEW = 0
-    STAFF = 1
+    VIEW = 1
     MANAGE = 2
     DIRECTOR = 3
     ADMIN = 4
@@ -27,56 +26,6 @@ class Role(db.Model):
         super(Role, self).__init__(**kwargs)
         if self.permissions is None:
             self.permissions = Permission.VIEW
-
-    # @staticmethod
-    # def insert_roles():
-    #     roles = {
-    #         "Staff": (Permission.VIEW, None),
-    #         "Manager": (Permission.VIEW, Permission.MANAGE),
-    #         "Director": (Permission.VIEW, Permission.MANAGE, Permission.DIRECTOR),
-    #         "Administrator": (
-    #             Permission.VIEW,
-    #             Permission.MANAGE,
-    #             Permission.DIRECTOR,
-    #             Permission.ADMIN,
-    #         ),
-    #         "SuperAdministrator": (
-    #             Permission.VIEW,
-    #             Permission.MANAGE,
-    #             Permission.DIRECTOR,
-    #             Permission.ADMIN,
-    #             Permission.SUPERADMIN,
-    #         ),
-    #     }
-    #     default_role = "User"
-    #     for r in roles:
-    #         role = Role.query.filter_by(name=r).first()
-    #         if role is None:
-    #             role = Role(name=r)
-    #         role.reset_permissions()
-    #         for perm in roles[r]:
-    #             if perm:
-    #                 role.add_permission(perm)
-    #         role.default = role.name == default_role
-    #         db.session.add(role)
-    #     db.session.commit()
-
-    # def add_permission(self, perm):
-    #     if not self.has_permission(perm):
-    #         self.permissions += perm
-
-    # def remove_permission(self, perm):
-    #     if self.has_permission(perm):
-    #         self.permissions -= perm
-
-    # def reset_permissions(self):
-    #     self.permissions = 0
-
-    # def has_permission(self, perm):
-    #     return self.permissions & perm == perm
-
-    # def __repr__(self):
-    #     return "<Role %r>" % self.name
 
 
 class User(UserMixin, db.Model):
@@ -248,13 +197,13 @@ class DongHo(db.Model):
     # Nhóm đồng hồ: TENDONGHO+DN+CCX+Q3+R+QN+NGAYTHUCHIEN   (DDMMYYHHmmss)
     group_id = db.Column(db.String(255), nullable=True, index=True)
 
-    ten_dong_ho = db.Column(db.String(255), nullable=False)
+    ten_dong_ho = db.Column(db.String(255), nullable=False, index=True)
 
     phuong_tien_do = db.Column(db.String(255), nullable=True)
-    seri_chi_thi = db.Column(db.String(255), nullable=True)
-    seri_sensor = db.Column(db.String(255), nullable=True)
-    kieu_chi_thi = db.Column(db.String(255), nullable=True)
-    kieu_sensor = db.Column(db.String(255), nullable=True)
+    seri_chi_thi = db.Column(db.String(255), nullable=True, index=True)
+    seri_sensor = db.Column(db.String(255), nullable=True, index=True)
+    kieu_chi_thi = db.Column(db.String(255), nullable=True, index=True)
+    kieu_sensor = db.Column(db.String(255), nullable=True, index=True)
     kieu_thiet_bi = db.Column(db.String(255), nullable=True)
     co_so_san_xuat = db.Column(db.String(255), nullable=True)
     so_tem = db.Column(db.String(255), nullable=True)
