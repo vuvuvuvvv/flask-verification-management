@@ -1,84 +1,60 @@
+import os
 from sqlalchemy import Integer
 from app.extensions import db
 from werkzeug.security import generate_password_hash, check_password_hash
 from flask_login import UserMixin
-from datetime import datetime
+from datetime import datetime, timedelta
 from app.utils.url_encrypt import encode, decode
+from flask_jwt_extended import create_access_token, decode_token
 
+class Permission:
+    VIEW = 1
+    MANAGE = 2
+    DIRECTOR = 3
+    ADMIN = 4
+    SUPERADMIN = 5
 
-# class Permission:
-#     VIEW = 1
-#     MANAGE = 2
-#     DIRECTOR = 4
-#     ADMIN = 8
-#     SUPERADMIN = 16
+class Role(db.Model):
+    __tablename__ = "roles"
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(64), unique=True)
+    default = db.Column(db.Boolean, default=False, index=True)
+    permissions = db.Column(db.Integer)
+    users = db.relationship("User", backref="role", lazy="dynamic")
 
-
-# class Role(db.Model):
-#     __tablename__ = 'roles'
-#     id = db.Column(db.Integer, primary_key=True)
-#     name = db.Column(db.String(64), unique=True)
-#     default = db.Column(db.Boolean, default=False, index=True)
-#     permissions = db.Column(db.Integer)
-#     users = db.relationship('User', backref='role', lazy='dynamic')
-
-#     def __init__(self, **kwargs):
-#         super(Role, self).__init__(**kwargs)
-#         if self.permissions is None:
-#             self.permissions = 0
-
-#     @staticmethod
-#     def insert_roles():
-#         roles = {
-#             'User': (Permission.VIEW, None),
-#             'Manager': (Permission.VIEW , Permission.MANAGE),
-#             'Director': (Permission.VIEW , Permission.MANAGE , Permission.DIRECTOR),
-#             'Administrator': (Permission.VIEW , Permission.MANAGE , Permission.DIRECTOR , Permission.ADMIN),
-#             'SuperAdministrator':(Permission.VIEW , Permission.MANAGE , Permission.DIRECTOR , Permission.ADMIN , Permission.SUPERADMIN),
-#         }
-#         default_role = 'User'
-#         for r in roles:
-#             role = Role.query.filter_by(name=r).first()
-#             if role is None:
-#                 role = Role(name=r)
-#             role.reset_permissions()
-#             for perm in (roles[r]):
-#                 if perm: role.add_permission(perm)
-#             role.default = (role.name == default_role)
-#             db.session.add(role)
-#         db.session.commit()
-
-#     def add_permission(self, perm):
-#         if not self.has_permission(perm):
-#             self.permissions += perm
-
-#     def remove_permission(self, perm):
-#         if self.has_permission(perm):
-#             self.permissions -= perm
-
-#     def reset_permissions(self):
-#         self.permissions = 0
-
-#     def has_permission(self, perm):
-#         return self.permissions & perm == perm
-
-#     def __repr__(self):
-#         return '<Role %r>' % self.name
+    def __init__(self, **kwargs):
+        super(Role, self).__init__(**kwargs)
+        if self.permissions is None:
+            self.permissions = Permission.VIEW
 
 
 class User(UserMixin, db.Model):
     __tablename__ = "user"
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(64), index=True, unique=True, nullable=False)
-    fullname = db.Column(
-        db.String(100), index=True, nullable=False, default="404 Notfound"
-    )
+    fullname = db.Column(db.String(100), index=True, nullable=False, default="Unknown")
     email = db.Column(db.String(120), index=True, unique=True, nullable=False)
     password_hash = db.Column(db.String(256), nullable=False)
-    role = db.Column(db.String(10), default="USER")
+    role_id = db.Column(db.Integer, db.ForeignKey("roles.id"))
+    confirmed = db.Column(db.Boolean, default=False)
+
+    def __init__(self, **kwargs):
+        super(User, self).__init__(**kwargs)
+        if self.role is None:
+            self.role = Role.query.filter_by(default=True).first()
+            # if self.email == os.environ.get['ADMIN_MAIL']:
+            #     self.role = Role.query.filter_by(name='Administrator').first()
+            # if self.role is None:
+            #     self.role = Role.query.filter_by(default=True).first()
 
     def set_email(self, email):
         self.email = email
+
+    def is_superadmin(self):
+        return self.role.permissions == Permission.SUPERADMIN
+
+    def is_admin(self):
+        return self.role.permissions == Permission.ADMIN or self.is_superadmin()
 
     def set_fullname(self, fullname):
         self.fullname = fullname
@@ -89,13 +65,36 @@ class User(UserMixin, db.Model):
     def check_password(self, password):
         return check_password_hash(self.password_hash, password)
 
+    def generate_confirmation_token(self, exp_minutes=5):
+        token = create_access_token(
+            identity={"confirm_id": self.id},
+            expires_delta=timedelta(minutes=exp_minutes),
+        )
+        return token
+
+    def confirm(self, token):
+        try:
+            decoded_data = decode_token(token)
+            confirm_id = decoded_data.get("sub", {}).get("confirm_id")
+            if confirm_id != self.id:
+                return False
+            self.confirmed = True
+            db.session.add(self)
+            db.session.commit()
+            return True
+        except Exception as e:
+            print(f"Token confirmation error: {e}")
+            return False
+
     def to_dict(self):
         return {
-            "id": self.id,
+            "id": encode(self.id),
             "username": self.username,
             "fullname": self.fullname,
             "email": self.email,
-            "role": self.role,
+            "role": self.role.name if self.role.name else "Unknown",
+            "confirmed": 1 if self.confirmed else 0,
+            "permission" :  self.role.permissions if self.role.permissions else 0,
         }
 
 
@@ -115,8 +114,8 @@ class PDM(db.Model):
     __tablename__ = "pdm"
 
     id = db.Column(db.Integer, primary_key=True)
-    ma_tim_dong_ho_pdm = db.Column(db.String(255), nullable=True)
-    ten_dong_ho = db.Column(db.String(255), nullable=False)
+    ma_tim_dong_ho_pdm = db.Column(db.String(255), nullable=True, index=True)
+    ten_dong_ho = db.Column(db.String(255), nullable=False, index=True)
     noi_san_xuat = db.Column(db.String(255), nullable=False)
     dn = db.Column(db.String(255), nullable=True)
     ccx = db.Column(db.String(255), nullable=True)
@@ -127,7 +126,7 @@ class PDM(db.Model):
     r = db.Column(db.String(255), nullable=True)
     don_vi_pdm = db.Column(db.String(255), nullable=False)
     dia_chi = db.Column(db.String(255), nullable=True)
-    so_qd_pdm = db.Column(db.String(255), nullable=True)
+    so_qd_pdm = db.Column(db.String(255), nullable=True, index=True)
     ngay_qd_pdm = db.Column(db.DateTime, nullable=True)
     ngay_het_han = db.Column(db.DateTime, nullable=True)
     anh_pdm = db.Column(db.String(255), nullable=True)
@@ -196,15 +195,15 @@ class DongHo(db.Model):
     id = db.Column(db.Integer, primary_key=True)
 
     # Nhóm đồng hồ: TENDONGHO+DN+CCX+Q3+R+QN+NGAYTHUCHIEN   (DDMMYYHHmmss)
-    group_id = db.Column(db.String(255), nullable=True)
+    group_id = db.Column(db.String(255), nullable=True, index=True)
 
-    ten_dong_ho = db.Column(db.String(255), nullable=False)
+    ten_dong_ho = db.Column(db.String(255), nullable=False, index=True)
 
     phuong_tien_do = db.Column(db.String(255), nullable=True)
-    seri_chi_thi = db.Column(db.String(255), nullable=True)
-    seri_sensor = db.Column(db.String(255), nullable=True)
-    kieu_chi_thi = db.Column(db.String(255), nullable=True)
-    kieu_sensor = db.Column(db.String(255), nullable=True)
+    seri_chi_thi = db.Column(db.String(255), nullable=True, index=True)
+    seri_sensor = db.Column(db.String(255), nullable=True, index=True)
+    kieu_chi_thi = db.Column(db.String(255), nullable=True, index=True)
+    kieu_sensor = db.Column(db.String(255), nullable=True, index=True)
     kieu_thiet_bi = db.Column(db.String(255), nullable=True)
     co_so_san_xuat = db.Column(db.String(255), nullable=True)
     so_tem = db.Column(db.String(255), nullable=True)
@@ -231,7 +230,12 @@ class DongHo(db.Model):
     nhiet_do = db.Column(db.String(255), nullable=True)
     do_am = db.Column(db.String(255), nullable=True)
     du_lieu_kiem_dinh = db.Column(db.Text, nullable=True)
-    so_giay_chung_nhan = db.Column(db.String(255), nullable=True)
+    so_giay_chung_nhan = db.Column(db.String(255), nullable=True, index=True)
+    last_updated = db.Column(db.Text, nullable=True)
+    owner_id = db.Column(db.Integer, db.ForeignKey("user.id"), index=True)
+
+    # Define the relationship to the User model
+    user = db.relationship("User", foreign_keys=[owner_id], backref="user_dongho")
 
     def __init__(
         self,
@@ -269,6 +273,7 @@ class DongHo(db.Model):
         du_lieu_kiem_dinh,
         hieu_luc_bien_ban,
         so_giay_chung_nhan,
+        last_updated,
     ):
         self.group_id = group_id
         self.ten_dong_ho = ten_dong_ho
@@ -304,11 +309,12 @@ class DongHo(db.Model):
         self.du_lieu_kiem_dinh = du_lieu_kiem_dinh
         self.hieu_luc_bien_ban = hieu_luc_bien_ban
         self.so_giay_chung_nhan = so_giay_chung_nhan
+        self.last_updated = last_updated
 
     def to_dict(self):
         return {
             "id": encode(self.id),
-            "group_id": encode(self.group_id),
+            "group_id": self.group_id,
             "ten_dong_ho": self.ten_dong_ho,
             "phuong_tien_do": self.phuong_tien_do,
             "seri_chi_thi": self.seri_chi_thi,
@@ -342,6 +348,8 @@ class DongHo(db.Model):
             "du_lieu_kiem_dinh": self.du_lieu_kiem_dinh,
             "hieu_luc_bien_ban": self.hieu_luc_bien_ban,
             "so_giay_chung_nhan": self.so_giay_chung_nhan,
+            "last_updated": self.last_updated,
+            "owner": None if not self.user else self.user.to_dict()
         }
 
 
@@ -352,19 +360,58 @@ class NhomDongHoPayment(db.Model):
     is_paid = db.Column(db.Boolean, default=False, nullable=False)
     paid_date = db.Column(db.DateTime, nullable=True)
     payment_collector = db.Column(db.String(50), nullable=True)
+    last_updated = db.Column(db.Text, nullable=True)
 
-    def __init__(self, group_id, is_paid=False, paid_date=None, payment_collector=None):
+    def __init__(
+        self,
+        group_id,
+        is_paid=False,
+        paid_date=None,
+        payment_collector=None,
+        last_updated=None,
+    ):
         self.group_id = group_id
         self.is_paid = is_paid
         self.paid_date = paid_date
         self.payment_collector = payment_collector
-        # self.notes = notes
+        self.last_updated = last_updated
 
     def to_dict(self):
         return {
             "id": encode(self.id),
-            "group_id": encode(self.group_id),
+            "group_id": self.group_id,
             "is_paid": self.is_paid,
             "paid_date": self.paid_date,
             "payment_collector": self.payment_collector,
+            "last_updated": self.last_updated,
         }
+
+
+class DongHoPermissions(db.Model):
+    __tablename__ = "dongho_permissions"
+    id = db.Column(db.Integer, primary_key=True)
+    dongho_id = db.Column(db.Integer, db.ForeignKey("dongho.id"), index=True)
+    username = db.Column(db.String(64), db.ForeignKey("user.username"), index=True)
+    role_id = db.Column(db.Integer, db.ForeignKey("roles.id"))
+    manager = db.Column(db.String(64), db.ForeignKey("user.username"), index=True)
+
+    dongho = db.relationship("DongHo", foreign_keys=[dongho_id], backref="dongho_permissions")
+    user = db.relationship("User", foreign_keys=[username], backref="user_permissions")
+    mng = db.relationship("User", foreign_keys=[manager], backref="manager_permissions")
+    role = db.relationship("Role", foreign_keys=[role_id], backref="role_permissions")
+
+    def __init__(self, dongho_id, username,manager, role_id):
+        self.dongho_id = dongho_id
+        self.username = username
+        self.manager = manager
+        self.role_id = role_id
+
+    def to_dict(self):
+        return {
+            "id": encode(self.id),
+            "dongho":  None if not self.dongho else self.dongho.to_dict(),
+            "user":  None if not self.user else self.user.to_dict(),
+            "manager":  None if not self.mng else self.mng.to_dict(),
+            "role":  None if not self.role else self.role.name,
+        }
+
