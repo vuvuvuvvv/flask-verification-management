@@ -1,4 +1,5 @@
 from datetime import datetime, timedelta
+import math
 import os
 from flask import Blueprint, jsonify, request
 from flask_jwt_extended import jwt_required, get_jwt_identity
@@ -19,13 +20,11 @@ from unidecode import unidecode
 
 dongho_bp = Blueprint("dongho", __name__)
 
-
 @dongho_bp.route("/group", methods=["GET"])
 @jwt_required()
 def get_nhom_dongho():
     try:
         query = DongHo.query.filter(
-            # cast(DongHo.dn, Integer) < 15,
             DongHo.group_id.isnot(None)
         )
 
@@ -86,21 +85,25 @@ def get_nhom_dongho():
                     ),
                     400,
                 )
+        grouped_query = query.with_entities(
+            DongHo.group_id,
+            db.func.count(DongHo.id).label("so_luong"),
+            db.func.max(DongHo.ten_dong_ho).label("ten_dong_ho"),
+            db.func.max(DongHo.co_so_san_xuat).label("co_so_san_xuat"),
+            db.func.max(DongHo.ten_khach_hang).label("ten_khach_hang"),
+            db.func.max(DongHo.co_so_su_dung).label("co_so_su_dung"),
+            db.func.max(DongHo.nguoi_kiem_dinh).label("nguoi_kiem_dinh"),
+            db.func.max(DongHo.ngay_thuc_hien).label("ngay_thuc_hien"),
+        ).group_by(DongHo.group_id)
+
+        total_records = grouped_query.count()
 
         # Thực hiện nhóm và đếm trực tiếp trong truy vấn
+        limit = int(request.args.get("limit", 10))
+        page = int(request.args.get("page", 1))
+
         result = (
-            query.with_entities(
-                DongHo.group_id,
-                db.func.count(DongHo.id).label("so_luong"),
-                db.func.max(DongHo.ten_dong_ho).label("ten_dong_ho"),
-                db.func.max(DongHo.co_so_san_xuat).label("co_so_san_xuat"),
-                db.func.max(DongHo.ten_khach_hang).label("ten_khach_hang"),
-                db.func.max(DongHo.co_so_su_dung).label("co_so_su_dung"),
-                db.func.max(DongHo.nguoi_kiem_dinh).label("nguoi_kiem_dinh"),
-                db.func.max(DongHo.ngay_thuc_hien).label("ngay_thuc_hien"),
-            )
-            .group_by(DongHo.group_id)
-            .all()
+            grouped_query.offset(limit * (page-1)).limit(limit).all()
         )
 
         NDH_payment = {
@@ -123,10 +126,10 @@ def get_nhom_dongho():
             for row in result
         ]
 
-        return jsonify(result_list), 200
+        return jsonify({"total_page": math.ceil(total_records / limit),"total_records": total_records, "groups": result_list}), 200
     except Exception as e:
+        print(e)
         return jsonify({"msg": f"Đã có lỗi xảy ra! Hãy thử lại sau."}), 500
-
 
 @dongho_bp.route("/permission/group/<string:username>", methods=["GET"])
 @jwt_required()
@@ -186,8 +189,7 @@ def get_nhom_dongho_with_permission(username):
                 )
 
         # Group by group_id and aggregate results
-        result = (
-            queryDHP.with_entities(
+        queryDHP = queryDHP.with_entities(
                 DongHo.group_id,
                 db.func.count(DongHo.id).label("so_luong"),
                 db.func.max(DongHo.ten_dong_ho).label("ten_dong_ho"),
@@ -196,9 +198,16 @@ def get_nhom_dongho_with_permission(username):
                 db.func.max(DongHo.co_so_su_dung).label("co_so_su_dung"),
                 db.func.max(DongHo.nguoi_kiem_dinh).label("nguoi_kiem_dinh"),
                 db.func.max(DongHo.ngay_thuc_hien).label("ngay_thuc_hien"),
-            )
-            .group_by(DongHo.group_id)
-            .all()
+            ).group_by(DongHo.group_id)
+
+        total_records = queryDHP.count()
+
+        # Thực hiện nhóm và đếm trực tiếp trong truy vấn
+        limit = int(request.args.get("ngay_kiem_dinh_to", 10))
+        page = int(request.args.get("ngay_kiem_dinh_to", 1))
+
+        result = (
+            queryDHP.offset(limit * (page-1)).limit(limit).all()
         )
 
         # Fetch payment status
@@ -222,12 +231,10 @@ def get_nhom_dongho_with_permission(username):
             }
             for row in result
         ]
-
-        return jsonify(result_list), 200
+        return jsonify({"total_page": math.ceil(total_records / limit),"total_records": total_records, "groups": result_list}), 200
     except Exception as e:
         print(e)
         return jsonify({"msg": f"Đã có lỗi xảy ra! Hãy thử lại sau."}), 500
-
 
 @dongho_bp.route("", methods=["GET"])
 @jwt_required()
@@ -235,12 +242,7 @@ def get_donghos():
     try:
         query = DongHo.query
 
-        # is_bigger_than_15 = request.args.get("is_bigger_than_15")
-        # if is_bigger_than_15 == '1':
-        #     query = query.filter(cast(DongHo.dn, Integer) > 15)
-        # else:
-        #     query = query.filter(cast(DongHo.dn, Integer) <= 15)
-
+        # Apply filters based on request parameters
         so_giay_chung_nhan = request.args.get("so_giay_chung_nhan")
         if so_giay_chung_nhan:
             query = query.filter(
@@ -259,6 +261,133 @@ def get_donghos():
         if nguoi_kiem_dinh:
             query = query.filter(DongHo.nguoi_kiem_dinh.ilike(f"%{nguoi_kiem_dinh}%"))
 
+        # Date range filters
+        ngay_kiem_dinh_from = request.args.get("ngay_kiem_dinh_from")
+        if ngay_kiem_dinh_from:
+            try:
+                ngay_kiem_dinh_from = ngay_kiem_dinh_from.split(" (")[0]
+                ngay_kiem_dinh_from = datetime.strptime(
+                    ngay_kiem_dinh_from, "%a %b %d %Y %H:%M:%S GMT%z"
+                )
+                query = query.filter(DongHo.ngay_thuc_hien >= ngay_kiem_dinh_from)
+            except ValueError as e:
+                return (
+                    jsonify(
+                        {
+                            "msg": f"Invalid date format for 'ngay_kiem_dinh_from': {str(e)}"
+                        }
+                    ),
+                    400,
+                )
+
+        ngay_kiem_dinh_to = request.args.get("ngay_kiem_dinh_to")
+        if ngay_kiem_dinh_to:
+            try:
+                ngay_kiem_dinh_to = ngay_kiem_dinh_to.split(" (")[0]
+                ngay_kiem_dinh_to = datetime.strptime(
+                    ngay_kiem_dinh_to, "%a %b %d %Y %H:%M:%S GMT%z"
+                )
+                query = query.filter(DongHo.ngay_thuc_hien <= ngay_kiem_dinh_to)
+            except ValueError as e:
+                return (
+                    jsonify(
+                        {
+                            "msg": f"Invalid date format for 'ngay_kiem_dinh_to': {str(e)}"
+                        }
+                    ),
+                    400,
+                )
+
+        # Get total count of records matching the filters
+        total_count = query.count()
+
+        # Keyset pagination
+        limit = int(request.args.get("limit", 10))  
+        last_seen_id_encoded = request.args.get("last_seen_id", "")
+        last_seen_id = 0
+        if last_seen_id_encoded:
+            try:
+                last_seen_id = int(decode(last_seen_id_encoded))
+            except Exception as e:
+                print(f"Decoding error: {e}")
+        next_id_from_encoded = request.args.get("next_id_from", "")
+        next_from_id = 0
+        if next_id_from_encoded:
+            try:
+                next_from_id = int(decode(next_id_from_encoded))
+            except Exception as e:
+                print(f"Decoding error: {e}")
+                
+        prev_id_from_encoded = request.args.get("prev_id_from", "")
+        prev_from_id = 0
+        if prev_id_from_encoded:
+            try:
+                prev_from_id = int(decode(prev_id_from_encoded))
+            except Exception as e:
+                print(f"Decoding error: {e}")
+        
+        if last_seen_id:
+            query = query.filter(DongHo.id >= last_seen_id).order_by(DongHo.id.asc()).limit(limit)
+        else:
+            if prev_from_id != 0 and next_from_id != 0:
+                query = query.filter(DongHo.id > 0).order_by(DongHo.id.asc()).limit(limit)
+            elif prev_from_id != 0:
+                query = query.filter(DongHo.id < prev_from_id).order_by(DongHo.id.desc()).limit(limit)
+            else:
+                query = query.filter(DongHo.id > next_from_id).order_by(DongHo.id.asc()).limit(limit)
+
+        donghos = query.all()
+
+        if prev_from_id:
+            donghos = list(reversed(donghos))
+
+        result = []
+        for dongho in donghos:
+            if dongho:
+                dongho_dict = None if not dongho else dongho.to_dict()
+                if "du_lieu_kiem_dinh" in dongho_dict:
+                    try:
+                        dongho_dict["du_lieu_kiem_dinh"] = json.loads(
+                            dongho_dict["du_lieu_kiem_dinh"]
+                        )
+                    except json.JSONDecodeError as e:
+                        return (
+                            jsonify({"msg": f"Đã có lỗi xảy ra! Hãy thử lại sau."}),
+                            500,
+                        )
+
+                result.append(dongho_dict)
+
+        return jsonify({"total_page": math.ceil(total_count / limit),"total_records": total_count, "donghos": result}), 200
+    except Exception as e:
+        print(e)
+        return jsonify({"msg": f"Đã có lỗi xảy ra! Hãy thử lại sau."}), 500
+    
+# Lấy ra toàn bộ dongHo hợp lệ với vai trò người dùng (<= Admin)
+# SuperAdmin thì lấy ra toàn bộ: @dongho_bp.route("", methods=["GET"])
+@dongho_bp.route("/permission/<string:username>", methods=["GET"])
+@jwt_required()
+def get_donghos_with_permission(username):
+    try:
+
+        queryDHP = DongHoPermissions.query.filter(
+            DongHoPermissions.username == username
+        )
+
+        so_giay_chung_nhan = request.args.get("so_giay_chung_nhan")
+        if so_giay_chung_nhan:
+            queryDHP = queryDHP.filter(
+                DongHoPermissions.dongho.so_giay_chung_nhan.ilike(
+                    f"%{so_giay_chung_nhan}%"
+                )
+            )
+
+        seri_sensor = request.args.get("seri_sensor")
+        if seri_sensor:
+            queryDHP = queryDHP.join(DongHo).filter(
+                DongHo.seri_sensor.ilike(f"%{seri_sensor}%")
+            )
+
         # Chuyển đổi ngày tháng từ chuỗi sang datetime
         ngay_kiem_dinh_from = request.args.get("ngay_kiem_dinh_from")
         if ngay_kiem_dinh_from:
@@ -270,7 +399,9 @@ def get_donghos():
                 ngay_kiem_dinh_from = datetime.strptime(
                     ngay_kiem_dinh_from, "%a %b %d %Y %H:%M:%S GMT%z"
                 )
-                query = query.filter(DongHo.ngay_thuc_hien >= ngay_kiem_dinh_from)
+                queryDHP = queryDHP.filter(
+                    DongHoPermissions.dongho.ngay_thuc_hien >= ngay_kiem_dinh_from
+                )
             except ValueError as e:
                 return (
                     jsonify(
@@ -291,7 +422,9 @@ def get_donghos():
                 ngay_kiem_dinh_to = datetime.strptime(
                     ngay_kiem_dinh_to, "%a %b %d %Y %H:%M:%S GMT%z"
                 )
-                query = query.filter(DongHo.ngay_thuc_hien <= ngay_kiem_dinh_to)
+                queryDHP = queryDHP.filter(
+                    DongHoPermissions.dongho.ngay_thuc_hien <= ngay_kiem_dinh_to
+                )
             except ValueError as e:
                 return (
                     jsonify(
@@ -301,11 +434,52 @@ def get_donghos():
                     ),
                     400,
                 )
+            
+        # Get total records
+        total_count = queryDHP.count()
 
-        donghos = query.all()
+        # Keyset pagination
+        limit = int(request.args.get("limit", 10))  
+        last_seen_id_encoded = request.args.get("last_seen_id", "")
+        last_seen_id = 0
+        if last_seen_id_encoded:
+            try:
+                last_seen_id = int(decode(last_seen_id_encoded))
+            except Exception as e:
+                print(f"Decoding error: {e}")
+        next_id_from_encoded = request.args.get("next_id_from", "")
+        next_from_id = 0
+        if next_id_from_encoded:
+            try:
+                next_from_id = int(decode(next_id_from_encoded))
+            except Exception as e:
+                print(f"Decoding error: {e}")
+                
+        prev_id_from_encoded = request.args.get("prev_id_from", "")
+        prev_from_id = 0
+        if prev_id_from_encoded:
+            try:
+                prev_from_id = int(decode(prev_id_from_encoded))
+            except Exception as e:
+                print(f"Decoding error: {e}")
+        
+        if last_seen_id:
+            queryDHP = queryDHP.filter(DongHo.id >= last_seen_id).order_by(DongHo.id.asc()).limit(limit)
+        else:
+            if prev_from_id != 0 and next_from_id != 0:
+                queryDHP = queryDHP.filter(DongHo.id > 0).order_by(DongHo.id.asc()).limit(limit)
+            elif prev_from_id != 0:
+                queryDHP = queryDHP.filter(DongHo.id < prev_from_id).order_by(DongHo.id.desc()).limit(limit)
+            else:
+                queryDHP = queryDHP.filter(DongHo.id > next_from_id).order_by(DongHo.id.asc()).limit(limit)
 
+        donghosWithPer = queryDHP.all()
+        if prev_from_id:
+            donghosWithPer = list(reversed(donghosWithPer))
+        
         result = []
-        for dongho in donghos:
+        for dwp in donghosWithPer:
+            dongho = dwp.dongho
             if dongho:
                 dongho_dict = None if not dongho else dongho.to_dict()
                 if "du_lieu_kiem_dinh" in dongho_dict:
@@ -318,14 +492,13 @@ def get_donghos():
                             jsonify({"msg": f"Đã có lỗi xảy ra! Hãy thử lại sau."}),
                             500,
                         )
-
-                # TODO:
-                # dongho_dict["current_permission"] = dwp.role.name
+                dongho_dict["current_permission"] = dwp.role.name
                 result.append(dongho_dict)
-        return jsonify(result), 200
+                
+        return jsonify({"total_page": math.ceil(total_count / limit),"total_records": total_count, "donghos": result}), 200
     except Exception as e:
+        print(e)
         return jsonify({"msg": f"Đã có lỗi xảy ra! Hãy thử lại sau."}), 500
-
 
 @dongho_bp.route("/get-all-names-exist", methods=["GET"])
 # @jwt_required()
@@ -357,13 +530,22 @@ def create_dongho():
         hieu_luc_bien_ban = None
         if data.get("so_giay_chung_nhan") and data.get("so_tem"):
             ngay_thuc_hien = data.get("ngay_thuc_hien")
+            print(ngay_thuc_hien)
             if ngay_thuc_hien:
                 try:
+                    if len(ngay_thuc_hien) < 20 or "T" not in ngay_thuc_hien or "Z" not in ngay_thuc_hien:
+                        raise ValueError("Invalid datetime format.")
+                    
                     ngay_thuc_hien_date = datetime.strptime(
                         ngay_thuc_hien, "%Y-%m-%dT%H:%M:%S.%fZ"
                     )
-                except ValueError:
-                    ngay_thuc_hien_date = datetime.strptime(ngay_thuc_hien, "%Y-%m-%d")
+                    # print(f"Parsed date: {ngay_thuc_hien_date}")
+                except ValueError as e:
+                    # print(f"Date parsing error: {e}, Input: {ngay_thuc_hien}")
+                    return jsonify({"msg": "Ngày thực hiện không hợp lệ!"}), 400
+
+                if not (1 <= ngay_thuc_hien_date.month <= 12):
+                    return jsonify({"msg": "Tháng không hợp lệ trong ngày thực hiện!"}), 400
 
                 if data.get("q3"):
                     hieu_luc_bien_ban = _get_last_day_of_month_in_future(
@@ -376,22 +558,14 @@ def create_dongho():
 
                 if hieu_luc_bien_ban:
                     hieu_luc_bien_ban = hieu_luc_bien_ban.date()
-
+            print(hieu_luc_bien_ban)
         seri_sensor = data.get("seri_sensor")
-        seri_chi_thi = data.get("seri_chi_thi")
 
         existing_dongho = DongHo.query.filter(
-            or_(
-                and_(
-                    DongHo.seri_sensor == seri_sensor,
-                    DongHo.seri_sensor != None,
-                    DongHo.seri_sensor != "",
-                ),
-                and_(
-                    DongHo.seri_chi_thi == seri_chi_thi,
-                    DongHo.seri_chi_thi != None,
-                    DongHo.seri_chi_thi != "",
-                ),
+            and_(
+                DongHo.seri_sensor == seri_sensor,
+                DongHo.seri_sensor != None,
+                DongHo.seri_sensor != "",
             )
         ).first()
 
@@ -400,6 +574,13 @@ def create_dongho():
                 jsonify({"msg": "Serial number hoặc Serial chỉ thị đã tồn tại!"}),
                 400,
             )
+        
+        current_user_identity = get_jwt_identity()
+        history_entry = {
+            "content": "Tạo mới đồng hồ.",
+            "updated_by": f"{current_user_identity['fullname']} - {current_user_identity['email']} - {current_user_identity['role']}",
+            "updated_at":  datetime.utcnow().isoformat(),
+        }
         new_dongho = DongHo(
             group_id=data.get("group_id"),
             ten_dong_ho=data.get("ten_dong_ho"),
@@ -435,17 +616,8 @@ def create_dongho():
             du_lieu_kiem_dinh=data.get("du_lieu_kiem_dinh"),
             hieu_luc_bien_ban=hieu_luc_bien_ban,
             so_giay_chung_nhan=data.get("so_giay_chung_nhan"),
+            last_updated = json.dumps(history_entry)
         )
-
-        current_user_identity = get_jwt_identity()
-
-        history_entry = {
-            "content": "Tạo mới đồng hồ.",
-            "updated_by": f"{current_user_identity['fullname']} - {current_user_identity['email']} - {current_user_identity['role']}",
-            "updated_at": datetime.utcnow().isoformat(),
-        }
-
-        new_dongho.last_updated = json.dumps(history_entry)
 
         db.session.add(new_dongho)
         db.session.commit()
@@ -465,7 +637,6 @@ def create_dongho():
         print(e)
         db.session.rollback()
         return jsonify({"msg": f"Đã có lỗi xảy ra! Hãy thử lại sau."}), 500
-
 
 @dongho_bp.route("/<string:id>", methods=["PUT"])
 @jwt_required()
@@ -520,22 +691,14 @@ def update_dongho(id):
                     hieu_luc_bien_ban = hieu_luc_bien_ban.date()
 
         seri_sensor = data.get("seri_sensor")
-        seri_chi_thi = data.get("seri_chi_thi")
 
         existing_dongho = DongHo.query.filter(
             DongHo.id != decoded_id,
-            or_(
-                and_(
-                    DongHo.seri_sensor == seri_sensor,
-                    DongHo.seri_sensor != None,
-                    DongHo.seri_sensor != "",
-                ),
-                and_(
-                    DongHo.seri_chi_thi == seri_chi_thi,
-                    DongHo.seri_chi_thi != None,
-                    DongHo.seri_chi_thi != "",
-                ),
-            ),
+            and_(
+                DongHo.seri_sensor == seri_sensor,
+                DongHo.seri_sensor != None,
+                DongHo.seri_sensor != "",
+            )
         ).first()
 
         if existing_dongho:
@@ -655,11 +818,10 @@ def get_dongho_by_info(info):
         if not info:
             return jsonify({"msg": "Thông tin là bắt buộc!"}), 400
 
-        # Check if a DongHo exists with either seri_sensor or seri_chi_thi
+        # Check if a DongHo exists with either seri_sensor
         existing_dongho = DongHo.query.filter(
             or_(
                 DongHo.seri_sensor == info,
-                DongHo.seri_chi_thi == info,
                 DongHo.so_tem == info,
                 DongHo.so_giay_chung_nhan == info,
             )
@@ -733,28 +895,28 @@ def get_dongho_by_group_id(group_id):
 
         for dongho in donghos:
             dongho_dict = dongho.to_dict()
-
-            # Decode du_lieu_kiem_dinh if present
-            if "du_lieu_kiem_dinh" in dongho_dict:
-                try:
-                    dongho_dict["du_lieu_kiem_dinh"] = json.loads(
-                        dongho_dict["du_lieu_kiem_dinh"]
-                    )
-                except json.JSONDecodeError:
-                    return jsonify({"msg": "Đã có lỗi xảy ra! Hãy thử lại sau."}), 500
-
-            # Fetch permissions for each DongHo
             permission = DongHoPermissions.query.filter(
                 and_(
                     DongHoPermissions.dongho_id == dongho.id,
                     DongHoPermissions.username == current_user_identity["username"],
                 )
             ).first()
-            dongho_dict["current_permission"] = (
-                user.role.name if user.is_superadmin() else permission.role.name
-            )
+            if permission:
+                # Decode du_lieu_kiem_dinh if present
+                if "du_lieu_kiem_dinh" in dongho_dict:
+                    try:
+                        dongho_dict["du_lieu_kiem_dinh"] = json.loads(
+                            dongho_dict["du_lieu_kiem_dinh"]
+                        )
+                    except json.JSONDecodeError:
+                        return jsonify({"msg": "Đã có lỗi xảy ra! Hãy thử lại sau."}), 500
 
-            result.append(dongho_dict)
+                # Fetch permissions for each DongHo
+                dongho_dict["current_permission"] = (
+                    user.role.name if user.is_superadmin() else permission.role.name
+                )
+
+                result.append(dongho_dict)
 
         return jsonify(result), 200
 
@@ -904,7 +1066,8 @@ def check_user_info_and_dh_id_for_dongho_permissions(id, user_info):
             )
         ).first()
 
-        if existing_permission or existing_user.is_superadmin():
+        # Cannnot gant permissions to Admin
+        if existing_permission or existing_user.is_admin():
             return (
                 jsonify(
                     {
@@ -953,104 +1116,6 @@ def check_user_info_and_group_id_permission_conflicts(group_id, user_info):
     if conflicts:
         return jsonify(conflicts), 409
     return jsonify({"message": "Hợp lệ để phân quyền."}), 200
-
-
-# Lấy ra toàn bộ dongHo hợp lệ với vai trò người dùng (<= Admin)
-# SuperAdmin thì lấy ra toàn bộ: @dongho_bp.route("", methods=["GET"])
-@dongho_bp.route("/permission/<string:username>", methods=["GET"])
-@jwt_required()
-def get_donghos_with_permission(username):
-    try:
-
-        queryDHP = DongHoPermissions.query.filter(
-            DongHoPermissions.username == username
-        )
-
-        so_giay_chung_nhan = request.args.get("so_giay_chung_nhan")
-        if so_giay_chung_nhan:
-            queryDHP = queryDHP.filter(
-                DongHoPermissions.dongho.so_giay_chung_nhan.ilike(
-                    f"%{so_giay_chung_nhan}%"
-                )
-            )
-
-        seri_sensor = request.args.get("seri_sensor")
-        if seri_sensor:
-            queryDHP = queryDHP.join(DongHo).filter(
-                DongHo.seri_sensor.ilike(f"%{seri_sensor}%")
-            )
-
-        # Chuyển đổi ngày tháng từ chuỗi sang datetime
-        ngay_kiem_dinh_from = request.args.get("ngay_kiem_dinh_from")
-        if ngay_kiem_dinh_from:
-            try:
-                # Loại bỏ phần không cần thiết
-                ngay_kiem_dinh_from = ngay_kiem_dinh_from.split(" (")[
-                    0
-                ]  # Chỉ lấy phần trước "(Indochina Time)"
-                ngay_kiem_dinh_from = datetime.strptime(
-                    ngay_kiem_dinh_from, "%a %b %d %Y %H:%M:%S GMT%z"
-                )
-                queryDHP = queryDHP.filter(
-                    DongHoPermissions.dongho.ngay_thuc_hien >= ngay_kiem_dinh_from
-                )
-            except ValueError as e:
-                return (
-                    jsonify(
-                        {
-                            "msg": f"Invalid date format for 'ngay_kiem_dinh_from': {str(e)}"
-                        }
-                    ),
-                    400,
-                )
-
-        ngay_kiem_dinh_to = request.args.get("ngay_kiem_dinh_to")
-        if ngay_kiem_dinh_to:
-            try:
-                # Loại bỏ phần không cần thiết
-                ngay_kiem_dinh_to = ngay_kiem_dinh_to.split(" (")[
-                    0
-                ]  # Chỉ lấy phần trước "(Indochina Time)"
-                ngay_kiem_dinh_to = datetime.strptime(
-                    ngay_kiem_dinh_to, "%a %b %d %Y %H:%M:%S GMT%z"
-                )
-                queryDHP = queryDHP.filter(
-                    DongHoPermissions.dongho.ngay_thuc_hien <= ngay_kiem_dinh_to
-                )
-            except ValueError as e:
-                return (
-                    jsonify(
-                        {
-                            "msg": f"Invalid date format for 'ngay_kiem_dinh_to': {str(e)}"
-                        }
-                    ),
-                    400,
-                )
-
-        donghosWithPer = queryDHP.all()
-
-        result = []
-        for dwp in donghosWithPer:
-            dongho = dwp.dongho
-            if dongho:
-                dongho_dict = None if not dongho else dongho.to_dict()
-                if "du_lieu_kiem_dinh" in dongho_dict:
-                    try:
-                        dongho_dict["du_lieu_kiem_dinh"] = json.loads(
-                            dongho_dict["du_lieu_kiem_dinh"]
-                        )
-                    except json.JSONDecodeError as e:
-                        return (
-                            jsonify({"msg": f"Đã có lỗi xảy ra! Hãy thử lại sau."}),
-                            500,
-                        )
-                dongho_dict["current_permission"] = dwp.role.name
-                result.append(dongho_dict)
-        return jsonify(result), 200
-    except Exception as e:
-        print(e)
-        return jsonify({"msg": f"Đã có lỗi xảy ra! Hãy thử lại sau."}), 500
-
 
 @dongho_bp.route("/permission", methods=["POST"])
 @jwt_required()

@@ -17,11 +17,11 @@ def get_pdms():
 
     ten_dong_ho = request.args.get("ten_dong_ho")
     if ten_dong_ho:
-        query = query.filter(PDM.ten_dong_ho.ilike(f"%{ten_dong_ho}%"))
+        query = query.filter(PDM.ten_dong_ho.ilike(f"%{ten_dong_ho.replace('@gach_cheo', '/')}%"))
 
     so_qd_pdm = request.args.get("so_qd_pdm")
     if so_qd_pdm:
-        query = query.filter(PDM.so_qd_pdm.ilike(f"%{so_qd_pdm}%"))
+        query = query.filter(PDM.so_qd_pdm.ilike(f"%{so_qd_pdm.replace('@gach_cheo', '/')}%"))
 
     ngay_qd_pdm_from = request.args.get("ngay_qd_pdm_from")
     if ngay_qd_pdm_from:
@@ -31,7 +31,7 @@ def get_pdms():
     if ngay_qd_pdm_to:
         query = query.filter(PDM.ngay_qd_pdm <= ngay_qd_pdm_to)
 
-    tinh_trang = request.args.get("tinh_trang") 
+    tinh_trang = request.args.get("tinh_trang")
     if tinh_trang:
         if int(tinh_trang) == 1:
             query = query.filter(PDM.ngay_het_han >= db.func.current_date())
@@ -40,19 +40,19 @@ def get_pdms():
 
     dn = request.args.get("dn")
     if dn:
-        query = query.filter(PDM.dn.ilike(f"%{dn}%"))
+        query = query.filter(PDM.dn.ilike(f"%{dn.replace('@gach_cheo', '/')}%"))
 
     ccx = request.args.get("ccx")
     if ccx:
-        query = query.filter(PDM.ccx.ilike(f"%{ccx}%"))
+        query = query.filter(PDM.ccx.ilike(f"%{ccx.replace('@gach_cheo', '/')}%"))
 
     kieu_sensor = request.args.get("kieu_sensor")
     if kieu_sensor:
-        query = query.filter(PDM.kieu_sensor.ilike(f"%{kieu_sensor}%"))
+        query = query.filter(PDM.kieu_sensor.ilike(f"%{kieu_sensor.replace('@gach_cheo', '/')}%"))
 
     transmitter = request.args.get("transmitter")
     if transmitter:
-        query = query.filter(PDM.transmitter.ilike(f"%{transmitter}%"))
+        query = query.filter(PDM.transmitter.ilike(f"%{transmitter.replace('@gach_cheo', '/')}%"))
 
     pdms = query.all()
 
@@ -95,8 +95,9 @@ def update_pdm():
         data = request.get_json()
         pdm_id = data.get("id") 
         existing_pdm = PDM.query.get(pdm_id) 
-
+        print(data)
         if existing_pdm:
+            existing_pdm.ma_tim_dong_ho_pdm = data.get("ma_tim_dong_ho_pdm")
             existing_pdm.ten_dong_ho = data.get("ten_dong_ho")
             existing_pdm.noi_san_xuat = data.get("noi_san_xuat")
             existing_pdm.dn = data.get("dn")
@@ -142,16 +143,20 @@ def update_pdm():
         db.session.rollback()  
         return jsonify({"msg": "Đã xảy ra lỗi khi cập nhật hoặc tạo mới PDM!", "error": str(e)}), 500 
 
-
 @pdm_bp.route("/id/<int:id>", methods=["GET"])
 @jwt_required()
 def get_pdm(id):
-    pdm = PDM.query.get_or_404(id)
-    return jsonify(pdm.to_dict()), 200
+    try:
+        pdm = PDM.query.get_or_404(id)
+        return jsonify(pdm.to_dict()), 200
+    except Exception as e:
+        print(f"Error retrieving PDM with id {id}: {e}")
+        return jsonify({"msg": "Đã xảy ra lỗi khi lấy thông tin PDM!", "error": str(e)}), 500  
 
 @pdm_bp.route("/so_qd_pdm/<string:so_qd_pdm>", methods=["GET"])
 @jwt_required()
 def get_so_qd_pdm(so_qd_pdm):
+    so_qd_pdm = so_qd_pdm.replace('@gach_cheo', '/')
     try:
         pdm_identifier = so_qd_pdm.split("-")[0].strip() 
         year = so_qd_pdm.split("-")[1].strip() 
@@ -172,17 +177,35 @@ def get_so_qd_pdm(so_qd_pdm):
 @pdm_bp.route("/ma_tim_dong_ho_pdm/<string:ma_tim_dong_ho_pdm>", methods=["GET"])
 @jwt_required()
 def get_ma_tim_dong_ho_pdm(ma_tim_dong_ho_pdm):
-    pdm = PDM.query.filter_by(ma_tim_dong_ho_pdm=ma_tim_dong_ho_pdm).first_or_404()
-    print("pdm: ", pdm)
-    return jsonify(pdm.to_dict()), 200
+    try:
+        ma_tim_dong_ho_pdm = ma_tim_dong_ho_pdm.replace('@gach_cheo', '/')
+        print(ma_tim_dong_ho_pdm)
+        pdm = PDM.query.filter_by(ma_tim_dong_ho_pdm=ma_tim_dong_ho_pdm).first()
+        if not pdm:
+            return jsonify({"msg": "PDM not found!"}), 404
+        
+        print("pdm: ", pdm)
+        return jsonify(pdm.to_dict()), 200
+    except Exception as e:
+        print(f"Error fetching PDM: {e}")
+        return jsonify({"msg": "An internal server error occurred!"}), 500
 
 @pdm_bp.route("/ma_tim_dong_ho_pdm/<string:ma_tim_dong_ho_pdm>", methods=["DELETE"])
 @jwt_required()
 def delete_by_pdm_id(ma_tim_dong_ho_pdm):
-    pdm = PDM.query.filter_by(ma_tim_dong_ho_pdm=ma_tim_dong_ho_pdm).first_or_404()
-    db.session.delete(pdm)
-    db.session.commit()
-    return jsonify({"msg": "PDM deleted successfully!"}), 200
+    try:
+        ma_tim_dong_ho_pdm = ma_tim_dong_ho_pdm.replace('@gach_cheo', '/')
+        
+        pdm = PDM.query.filter_by(ma_tim_dong_ho_pdm=ma_tim_dong_ho_pdm).first_or_404()
+        
+        db.session.delete(pdm)
+        db.session.commit()
+        
+        return jsonify({"msg": "Xóa phê duyệt mẫu thành công!"}), 200
+    except Exception as e:
+        print(f"Error deleting PDM: {e}")
+        db.session.rollback()
+        return jsonify({"msg": "Đã có lỗi xảy ra. Hãy thử lại sau."}), 500
 
 @pdm_bp.route("/so_qd_pdm/<string:so_qd_pdm>", methods=["DELETE"])
 @jwt_required()

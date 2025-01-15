@@ -50,11 +50,11 @@ class User(UserMixin, db.Model):
     def set_email(self, email):
         self.email = email
 
-    def is_admin(self):
-        return self.role.permissions == Permission.ADMIN
-
     def is_superadmin(self):
         return self.role.permissions == Permission.SUPERADMIN
+
+    def is_admin(self):
+        return self.role.permissions == Permission.ADMIN or self.is_superadmin()
 
     def set_fullname(self, fullname):
         self.fullname = fullname
