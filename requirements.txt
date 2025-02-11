@@ -9,6 +9,8 @@ Flask-Migrate==4.0.7
 Flask-Session==0.8.0
 Flask-SQLAlchemy==3.1.1
 openpyxl==3.1.2
+psycopg2==2.9.9
+psycopg2-binary==2.9.9
 python-dotenv==1.0.1
 python-slugify==8.0.1
 requests==2.31.0
