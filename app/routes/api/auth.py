@@ -8,9 +8,9 @@ from flask_jwt_extended import (
     create_refresh_token,
     jwt_required,
     get_jwt_identity,
+    get_jwt, decode_token
 )
 from flask_login import login_user, logout_user, login_required, current_user
-from flask_jwt_extended import get_jwt_identity, jwt_required, get_jwt
 from app.models import TokenBlacklist
 from app import db, login_manager
 from app.models import User
@@ -193,7 +193,6 @@ def send_verify_mail():
                 500,
             )
 
-
 @auth_bp.route("/change/email", methods=["POST"])
 @jwt_required()
 def reset_email():
@@ -238,7 +237,6 @@ def reset_email():
         200,
     )
 
-
 @auth_bp.route("/reset/password", methods=["POST"])
 @jwt_required()
 def reset_password():
@@ -281,32 +279,43 @@ def reset_password():
     )
 
 @auth_bp.route("/verify", methods=["POST"])
-@jwt_required()
 def verify():
     try:
-        current_user_identity = get_jwt_identity()
-        email = current_user_identity['email']
+        data = request.get_json()
+        verification_token = data.get("verification_token")
+        if not verification_token:
+            return jsonify({"msg": "Thiếu token xác thực!"}), 400
+
+        get_token_data = decode_token(verification_token)
+
+        # Thêm token vào blacklist nếu chưa tồn tại
+        jti = get_token_data.get("jti")  # JWT ID
+        expires = get_token_data.get("exp")  # Thời gian hết hạn
+
+        # Kiểm tra xem token đã có trong blacklist chưa
+        if not TokenBlacklist.query.filter_by(jti=jti).first():
+            blacklist_entry = TokenBlacklist(jti=jti, expires_at=datetime.fromtimestamp(expires))
+            db.session.add(blacklist_entry)
+            db.session.commit()
+
+        email = get_token_data.get("sub", {}).get("email")
+        if not email:
+            return jsonify({"msg": "Token không hợp lệ!"}), 400
+
+        # Kiểm tra người dùng
         user = User.query.filter_by(email=email).first()
         if not user:
             return jsonify({"msg": "Không tìm thấy người dùng!"}), 404
+
         user.confirmed = True
-        
-        clean_up_blacklist()
-        jti = get_jwt()["jti"]  # Get JWT ID
-        expires = get_jwt()["exp"]  # Get expiration time
-        blacklist_entry = TokenBlacklist(
-            jti=jti, expires_at=datetime.fromtimestamp(expires)
-        )
-        db.session.add(blacklist_entry)
         db.session.commit()
-        return (
-            jsonify(
-                user=user.to_dict(),
-                msg="Xác thực thành công!",
-            ),
-            200,
-        )
+
+        return jsonify(user=user.to_dict(), msg="Xác thực thành công!"), 200
+
+    except KeyError as e:
+        print(f"KeyError: {e}")
+        return jsonify({"msg": "Token không hợp lệ!", "error": str(e)}), 400
     except Exception as e:
-        print(e)
-        db.session.rollback()  # Rollback in case of any error
+        print(f"Exception: {e}")
+        db.session.rollback()  # Rollback nếu có lỗi
         return jsonify({"msg": "Đã xảy ra lỗi trong quá trình xác thực.", "error": str(e)}), 500

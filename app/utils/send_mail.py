@@ -47,6 +47,8 @@ def send_verify_email(email):
         identity={"email": email, "verified": True}, expires_delta=timedelta(minutes=5)
     )
 
+    print(token)
+
     reset_link = f"{os.environ.get('CLIENT_BASE_URL')}/verify/{token}"
 
     msg.html = render_template(
