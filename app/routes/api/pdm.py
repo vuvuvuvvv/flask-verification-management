@@ -2,6 +2,8 @@ from flask import Blueprint, jsonify, request
 from flask_jwt_extended import jwt_required
 from app.models import PDM
 from app import db
+from app.utils.url_encrypt import decode, encode
+import math
 
 pdm_bp = Blueprint("pdm", __name__)
 
@@ -9,56 +11,77 @@ pdm_bp = Blueprint("pdm", __name__)
 @pdm_bp.route("", methods=["GET"])
 @jwt_required()
 def get_pdms():
-    query = PDM.query
+    try:
+        query = PDM.query
+        total_count = query.count()
 
-    # ma_tim_dong_ho_pdm = request.args.get("ma_tim_dong_ho_pdm")
-    # if ma_tim_dong_ho_pdm:
-    #     query = query.filter(PDM.ma_tim_dong_ho_pdm.ilike(f"%{ma_tim_dong_ho_pdm}%"))
+        # ma_tim_dong_ho_pdm = request.args.get("ma_tim_dong_ho_pdm")
+        # if ma_tim_dong_ho_pdm:
+        #     query = query.filter(PDM.ma_tim_dong_ho_pdm.ilike(f"%{ma_tim_dong_ho_pdm}%"))
 
-    ten_dong_ho = request.args.get("ten_dong_ho")
-    if ten_dong_ho:
-        query = query.filter(PDM.ten_dong_ho.ilike(f"%{ten_dong_ho.replace('@gach_cheo', '/')}%"))
+        ten_dong_ho = request.args.get("ten_dong_ho")
+        if ten_dong_ho:
+            query = query.filter(PDM.ten_dong_ho.ilike(f"%{ten_dong_ho.replace('@gach_cheo', '/')}%"))
 
-    so_qd_pdm = request.args.get("so_qd_pdm")
-    if so_qd_pdm:
-        query = query.filter(PDM.so_qd_pdm.ilike(f"%{so_qd_pdm.replace('@gach_cheo', '/')}%"))
+        so_qd_pdm = request.args.get("so_qd_pdm")
+        if so_qd_pdm:
+            query = query.filter(PDM.so_qd_pdm.ilike(f"%{so_qd_pdm.replace('@gach_cheo', '/')}%"))
 
-    ngay_qd_pdm_from = request.args.get("ngay_qd_pdm_from")
-    if ngay_qd_pdm_from:
-        query = query.filter(PDM.ngay_qd_pdm >= ngay_qd_pdm_from)
+        ngay_qd_pdm_from = request.args.get("ngay_qd_pdm_from")
+        if ngay_qd_pdm_from:
+            query = query.filter(PDM.ngay_qd_pdm >= ngay_qd_pdm_from)
 
-    ngay_qd_pdm_to = request.args.get("ngay_qd_pdm_to")
-    if ngay_qd_pdm_to:
-        query = query.filter(PDM.ngay_qd_pdm <= ngay_qd_pdm_to)
+        ngay_qd_pdm_to = request.args.get("ngay_qd_pdm_to")
+        if ngay_qd_pdm_to:
+            query = query.filter(PDM.ngay_qd_pdm <= ngay_qd_pdm_to)
 
-    tinh_trang = request.args.get("tinh_trang")
-    if tinh_trang:
-        if int(tinh_trang) == 1:
-            query = query.filter(PDM.ngay_het_han >= db.func.current_date())
+        tinh_trang = request.args.get("tinh_trang")
+        if tinh_trang:
+            if int(tinh_trang) == 1:
+                query = query.filter(PDM.ngay_het_han >= db.func.current_date())
+            else:
+                query = query.filter(PDM.ngay_het_han < db.func.current_date())
+
+        dn = request.args.get("dn")
+        if dn:
+            query = query.filter(PDM.dn.ilike(f"%{dn.replace('@gach_cheo', '/')}%"))
+
+        ccx = request.args.get("ccx")
+        if ccx:
+            query = query.filter(PDM.ccx.ilike(f"%{ccx.replace('@gach_cheo', '/')}%"))
+
+        kieu_sensor = request.args.get("kieu_sensor")
+        if kieu_sensor:
+            query = query.filter(PDM.kieu_sensor.ilike(f"%{kieu_sensor.replace('@gach_cheo', '/')}%"))
+
+        transmitter = request.args.get("transmitter")
+        if transmitter:
+            query = query.filter(PDM.transmitter.ilike(f"%{transmitter.replace('@gach_cheo', '/')}%"))
+
+        # Keyset pagination
+        limit = int(request.args.get("limit", 10))  
+        last_seen = request.args.get("last_seen", "")
+        next_from_id = request.args.get("next_from", 0)
+        prev_from_id = request.args.get("prev_from", 0)
+        if last_seen:
+            query = query.filter(PDM.id >= last_seen).order_by(PDM.id.asc()).limit(limit)
         else:
-            query = query.filter(PDM.ngay_het_han < db.func.current_date())
+            if prev_from_id != 0 and next_from_id != 0:
+                query = query.filter(PDM.id > 0).order_by(PDM.id.asc()).limit(limit)
+            elif prev_from_id != 0:
+                query = query.filter(PDM.id < prev_from_id).order_by(PDM.id.desc()).limit(limit)
+            else:
+                query = query.filter(PDM.id > next_from_id).order_by(PDM.id.asc()).limit(limit)
+        pdms = query.all()
 
-    dn = request.args.get("dn")
-    if dn:
-        query = query.filter(PDM.dn.ilike(f"%{dn.replace('@gach_cheo', '/')}%"))
+        result = [pdm.to_dict() for pdm in pdms]
 
-    ccx = request.args.get("ccx")
-    if ccx:
-        query = query.filter(PDM.ccx.ilike(f"%{ccx.replace('@gach_cheo', '/')}%"))
+        return jsonify({"total_page": math.ceil(total_count / limit), "total_records": total_count, "data": result}), 200
 
-    kieu_sensor = request.args.get("kieu_sensor")
-    if kieu_sensor:
-        query = query.filter(PDM.kieu_sensor.ilike(f"%{kieu_sensor.replace('@gach_cheo', '/')}%"))
-
-    transmitter = request.args.get("transmitter")
-    if transmitter:
-        query = query.filter(PDM.transmitter.ilike(f"%{transmitter.replace('@gach_cheo', '/')}%"))
-
-    pdms = query.all()
-
-    result = [pdm.to_dict() for pdm in pdms]
-    return jsonify(result), 200
-
+    except Exception as e:
+        print(f"Error occurred: {e}")
+        return jsonify({"msg": "Đã có lỗi xảy ra khi lấy dữ liệu phê duyệt mẫu.", "error": str(e)}), 500
+    
 @pdm_bp.route("", methods=["POST"])
 @jwt_required()
 def create_pdm():

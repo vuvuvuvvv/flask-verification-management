@@ -303,31 +303,31 @@ def get_donghos():
 
         # Keyset pagination
         limit = int(request.args.get("limit", 10))  
-        last_seen_id_encoded = request.args.get("last_seen_id", "")
-        last_seen_id = 0
-        if last_seen_id_encoded:
+        last_seen_encoded = request.args.get("last_seen", "")
+        last_seen = 0
+        if last_seen_encoded:
             try:
-                last_seen_id = int(decode(last_seen_id_encoded))
+                last_seen = int(decode(last_seen_encoded))
             except Exception as e:
                 print(f"Decoding error: {e}")
-        next_id_from_encoded = request.args.get("next_id_from", "")
+        next_from_encoded = request.args.get("next_from", "")
         next_from_id = 0
-        if next_id_from_encoded:
+        if next_from_encoded:
             try:
-                next_from_id = int(decode(next_id_from_encoded))
+                next_from_id = int(decode(next_from_encoded))
             except Exception as e:
                 print(f"Decoding error: {e}")
                 
-        prev_id_from_encoded = request.args.get("prev_id_from", "")
+        prev_from_encoded = request.args.get("prev_from", "")
         prev_from_id = 0
-        if prev_id_from_encoded:
+        if prev_from_encoded:
             try:
-                prev_from_id = int(decode(prev_id_from_encoded))
+                prev_from_id = int(decode(prev_from_encoded))
             except Exception as e:
                 print(f"Decoding error: {e}")
         
-        if last_seen_id:
-            query = query.filter(DongHo.id >= last_seen_id).order_by(DongHo.id.asc()).limit(limit)
+        if last_seen:
+            query = query.filter(DongHo.id >= last_seen).order_by(DongHo.id.asc()).limit(limit)
         else:
             if prev_from_id != 0 and next_from_id != 0:
                 query = query.filter(DongHo.id > 0).order_by(DongHo.id.asc()).limit(limit)
@@ -440,31 +440,31 @@ def get_donghos_with_permission(username):
 
         # Keyset pagination
         limit = int(request.args.get("limit", 10))  
-        last_seen_id_encoded = request.args.get("last_seen_id", "")
-        last_seen_id = 0
-        if last_seen_id_encoded:
+        last_seen_encoded = request.args.get("last_seen", "")
+        last_seen = 0
+        if last_seen_encoded:
             try:
-                last_seen_id = int(decode(last_seen_id_encoded))
+                last_seen = int(decode(last_seen_encoded))
             except Exception as e:
                 print(f"Decoding error: {e}")
-        next_id_from_encoded = request.args.get("next_id_from", "")
+        next_from_encoded = request.args.get("next_from", "")
         next_from_id = 0
-        if next_id_from_encoded:
+        if next_from_encoded:
             try:
-                next_from_id = int(decode(next_id_from_encoded))
+                next_from_id = int(decode(next_from_encoded))
             except Exception as e:
                 print(f"Decoding error: {e}")
                 
-        prev_id_from_encoded = request.args.get("prev_id_from", "")
+        prev_from_encoded = request.args.get("prev_from", "")
         prev_from_id = 0
-        if prev_id_from_encoded:
+        if prev_from_encoded:
             try:
-                prev_from_id = int(decode(prev_id_from_encoded))
+                prev_from_id = int(decode(prev_from_encoded))
             except Exception as e:
                 print(f"Decoding error: {e}")
         
-        if last_seen_id:
-            queryDHP = queryDHP.filter(DongHo.id >= last_seen_id).order_by(DongHo.id.asc()).limit(limit)
+        if last_seen:
+            queryDHP = queryDHP.filter(DongHo.id >= last_seen).order_by(DongHo.id.asc()).limit(limit)
         else:
             if prev_from_id != 0 and next_from_id != 0:
                 queryDHP = queryDHP.filter(DongHo.id > 0).order_by(DongHo.id.asc()).limit(limit)
