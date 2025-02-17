@@ -73,6 +73,9 @@ def get_pdms():
             else:
                 query = query.filter(PDM.id > next_from_id).order_by(PDM.id.asc()).limit(limit)
         pdms = query.all()
+        
+        if prev_from_id:
+            pdms = list(reversed(pdms))
 
         result = [pdm.to_dict() for pdm in pdms]
 

@@ -515,7 +515,6 @@ def get_all_dongho_names_exist():
     except Exception as e:
         return jsonify({"msg": f"Đã có lỗi xảy ra! Hãy thử lại sau."}), 500
 
-
 def _get_last_day_of_month_in_future(years: int, date: datetime) -> datetime:
     return datetime(date.year + years, date.month + 1, 1) - timedelta(days=1)
 
