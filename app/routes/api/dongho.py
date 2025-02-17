@@ -500,9 +500,10 @@ def get_donghos_with_permission(username):
         print(e)
         return jsonify({"msg": f"Đã có lỗi xảy ra! Hãy thử lại sau."}), 500
 
-@dongho_bp.route("/get-all-names-exist", methods=["GET"])
+# Lấy ra tên và nơi sản xuất đồng hồ có trong phê duyệt mẫu
+@dongho_bp.route("/get-distinct-names-and-locations", methods=["GET"])
 # @jwt_required()
-def get_all_dongho_names_exist():
+def get_distinct_dongho_names_and_locations():
     try:
         ten_dong_ho_distinct = (
             PDM.query.with_entities(PDM.ten_dong_ho)
@@ -510,10 +511,21 @@ def get_all_dongho_names_exist():
             .order_by(PDM.ten_dong_ho)
             .all()
         )
-        result = [item[0] for item in ten_dong_ho_distinct]
+        noi_san_xuat_distinct = (
+            PDM.query.with_entities(PDM.noi_san_xuat)
+            .distinct()
+            .order_by(PDM.noi_san_xuat)
+            .all()
+        )
+        
+        result = {
+            "ten_dong_ho": [item[0] for item in ten_dong_ho_distinct],
+            "noi_san_xuat": [item[0] for item in noi_san_xuat_distinct]
+        }
+        
         return jsonify(result), 200
     except Exception as e:
-        return jsonify({"msg": f"Đã có lỗi xảy ra! Hãy thử lại sau."}), 500
+        return jsonify({"msg": "Đã có lỗi xảy ra! Hãy thử lại sau."}), 500
 
 def _get_last_day_of_month_in_future(years: int, date: datetime) -> datetime:
     return datetime(date.year + years, date.month + 1, 1) - timedelta(days=1)
