@@ -530,7 +530,6 @@ def get_distinct_dongho_names_and_locations():
 def _get_last_day_of_month_in_future(years: int, date: datetime) -> datetime:
     return datetime(date.year + years, date.month + 1, 1) - timedelta(days=1)
 
-
 @dongho_bp.route("", methods=["POST"])
 @jwt_required()
 def create_dongho():
@@ -909,7 +908,7 @@ def get_dongho_by_group_id(group_id):
             permission = DongHoPermissions.query.filter(
                 and_(
                     DongHoPermissions.dongho_id == dongho.id,
-                    DongHoPermissions.username == current_user_identity["username"],
+                    True if user.is_superadmin() else DongHoPermissions.username == current_user_identity["username"],
                 )
             ).first()
             if permission:
@@ -936,7 +935,6 @@ def get_dongho_by_group_id(group_id):
     except Exception as e:
         print(e)
         return jsonify({"msg": "Đã có lỗi xảy ra! Hãy thử lại sau."}), 500
-
 
 @dongho_bp.route("/ten-khach-hang/<string:ten_khach_hang>", methods=["GET"])
 @jwt_required()
@@ -1004,7 +1002,6 @@ def update_payment_status():
         db.session.rollback()
         return jsonify({"msg": f"Đã có lỗi xảy ra! Hãy thử lại sau."}), 500
 
-
 # Lấy ra toàn bộ phân quyền của dongho
 @dongho_bp.route("/user-permissions/<string:id>", methods=["GET"])
 @jwt_required()
@@ -1042,7 +1039,6 @@ def get_user_permissions(id):
     except Exception as e:
         print(e)
         return jsonify({"msg": f"Đã có lỗi xảy ra! Hãy thử lại sau."}), 500
-
 
 @dongho_bp.route("/user-info/<string:user_info>/id/<string:id>", methods=["GET"])
 @jwt_required()
@@ -1100,7 +1096,7 @@ def check_user_info_and_dh_id_for_dongho_permissions(id, user_info):
         print(e)
         return jsonify({"msg": "Đã có lỗi xảy ra! Hãy thử lại sau."}), 500
 
-
+# Check phân quyền đã tồn tại hay chưa
 @dongho_bp.route("/user-info/<string:user_info>/group-id/<string:group_id>", methods=["GET"])
 @jwt_required()
 def check_user_info_and_group_id_permission_conflicts(group_id, user_info):
@@ -1128,6 +1124,7 @@ def check_user_info_and_group_id_permission_conflicts(group_id, user_info):
         return jsonify(conflicts), 409
     return jsonify({"message": "Hợp lệ để phân quyền."}), 200
 
+# Thêm phân quyền
 @dongho_bp.route("/permission", methods=["POST"])
 @jwt_required()
 def upsert_dongho_permission():
@@ -1185,7 +1182,6 @@ def upsert_dongho_permission():
         print(e)
         db.session.rollback()
         return jsonify({"msg": "Đã có lỗi xảy ra! Hãy thử lại sau."}), 500
-
 
 @dongho_bp.route("/permission/group", methods=["POST"])
 @jwt_required()
@@ -1250,7 +1246,6 @@ def insert_group_dongho_permission():
         print(e)
         db.session.rollback()
         return jsonify({"msg": "Đã có lỗi xảy ra! Hãy thử lại sau."}), 500
-
 
 @dongho_bp.route("/permission/<string:id>", methods=["DELETE"])
 @jwt_required()
