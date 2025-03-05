@@ -194,6 +194,13 @@ class DongHo(db.Model):
 
     id = db.Column(db.Integer, primary_key=True)
 
+    ket_qua_check_vo_ngoai = db.Column(db.Boolean, default=False)
+    ghi_chu_vo_ngoai = db.Column(db.String(255), default=False, nullable=True)
+
+    is_hieu_chuan = db.Column(db.Boolean, default=False)    # hiệu chuẩn
+
+    index = db.Column(db.Integer, default=0)
+
     # Nhóm đồng hồ: TENDONGHO+DN+CCX+Q3+R+QN+NGAYTHUCHIEN   (DDMMYYHHmmss)
     group_id = db.Column(db.String(255), nullable=True, index=True)
 
@@ -223,7 +230,7 @@ class DongHo(db.Model):
     noi_thuc_hien = db.Column(db.String(255), nullable=True)
     phuong_phap_thuc_hien = db.Column(db.String(255), nullable=True)
     chuan_thiet_bi_su_dung = db.Column(db.String(255), nullable=True)
-    nguoi_kiem_dinh = db.Column(db.String(255), nullable=True)
+    nguoi_thuc_hien = db.Column(db.String(255), nullable=True)
     nguoi_soat_lai = db.Column(db.String(255), nullable=True)
     ngay_thuc_hien = db.Column(db.Date, nullable=True)
     hieu_luc_bien_ban = db.Column(db.Date, nullable=True)
@@ -239,6 +246,10 @@ class DongHo(db.Model):
 
     def __init__(
         self,
+        ket_qua_check_vo_ngoai,
+        ghi_chu_vo_ngoai,
+        is_hieu_chuan,
+        index,
         group_id,
         ten_dong_ho,
         phuong_tien_do,
@@ -262,7 +273,7 @@ class DongHo(db.Model):
         co_so_su_dung,
         phuong_phap_thuc_hien,
         chuan_thiet_bi_su_dung,
-        nguoi_kiem_dinh,
+        nguoi_thuc_hien,
         nguoi_soat_lai,
         ngay_thuc_hien,
         noi_su_dung,
@@ -275,6 +286,10 @@ class DongHo(db.Model):
         so_giay_chung_nhan,
         last_updated,
     ):
+        self.ket_qua_check_vo_ngoai = ket_qua_check_vo_ngoai
+        self.ghi_chu_vo_ngoai = ghi_chu_vo_ngoai
+        self.is_hieu_chuan = is_hieu_chuan
+        self.index = index
         self.group_id = group_id
         self.ten_dong_ho = ten_dong_ho
         self.phuong_tien_do = phuong_tien_do
@@ -298,7 +313,7 @@ class DongHo(db.Model):
         self.co_so_su_dung = co_so_su_dung
         self.phuong_phap_thuc_hien = phuong_phap_thuc_hien
         self.chuan_thiet_bi_su_dung = chuan_thiet_bi_su_dung
-        self.nguoi_kiem_dinh = nguoi_kiem_dinh
+        self.nguoi_thuc_hien = nguoi_thuc_hien
         self.nguoi_soat_lai = nguoi_soat_lai
         self.ngay_thuc_hien = ngay_thuc_hien
         self.noi_su_dung = noi_su_dung
@@ -313,7 +328,11 @@ class DongHo(db.Model):
 
     def to_dict(self):
         return {
-            "id": encode(self.id),
+            "id": encode(self.id), 
+            "ket_qua_check_vo_ngoai": self.ket_qua_check_vo_ngoai,
+            "ghi_chu_vo_ngoai": self.ghi_chu_vo_ngoai,
+            "is_hieu_chuan": self.is_hieu_chuan,
+            "index": self.index,
             "group_id": self.group_id,
             "ten_dong_ho": self.ten_dong_ho,
             "phuong_tien_do": self.phuong_tien_do,
@@ -337,7 +356,7 @@ class DongHo(db.Model):
             "co_so_su_dung": self.co_so_su_dung,
             "phuong_phap_thuc_hien": self.phuong_phap_thuc_hien,
             "chuan_thiet_bi_su_dung": self.chuan_thiet_bi_su_dung,
-            "nguoi_kiem_dinh": self.nguoi_kiem_dinh,
+            "nguoi_thuc_hien": self.nguoi_thuc_hien,
             "nguoi_soat_lai": self.nguoi_soat_lai,
             "ngay_thuc_hien": self.ngay_thuc_hien,
             "noi_su_dung": self.noi_su_dung,

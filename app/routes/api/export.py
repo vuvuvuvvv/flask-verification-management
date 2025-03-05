@@ -10,6 +10,9 @@ from openpyxl.drawing.image import Image
 from openpyxl.styles import Border, Side
 from app.constants import PP_THUC_HIEN
 
+from io import BytesIO
+import shutil
+
 import os
 
 export_bp = Blueprint("export", __name__)
@@ -191,8 +194,8 @@ def get_bb_kiem_dinh(id):
             if dongho.chuan_thiet_bi_su_dung:
                 sheet.cell(row=17, column=11, value=dongho.chuan_thiet_bi_su_dung)
 
-            if dongho.nguoi_kiem_dinh:
-                sheet.cell(row=19, column=9, value=str(dongho.nguoi_kiem_dinh).upper())
+            if dongho.nguoi_thuc_hien:
+                sheet.cell(row=19, column=9, value=str(dongho.nguoi_thuc_hien).upper())
 
             sheet.cell(
                 row=19,
@@ -364,7 +367,7 @@ def get_bb_kiem_dinh(id):
             
             sheet[f"D{start_row}"] = "Người thực hiện"
             sheet.merge_cells(f"D{start_row}:N{start_row}") 
-            sheet[f"E{start_row + 4}"] = str(dongho_dict['nguoi_kiem_dinh']).upper() if dongho_dict['nguoi_kiem_dinh'] else ""
+            sheet[f"E{start_row + 4}"] = str(dongho_dict['nguoi_thuc_hien']).upper() if dongho_dict['nguoi_thuc_hien'] else ""
             sheet.merge_cells(f"E{start_row + 4}:M{start_row + 4}") 
 
             sheet[f"X{start_row}"] = "Người soát lại"
@@ -372,10 +375,21 @@ def get_bb_kiem_dinh(id):
             sheet[f"W{start_row + 4}"] = str(dongho_dict['nguoi_soat_lai']).upper() if dongho_dict['nguoi_soat_lai'] else ""
             sheet.merge_cells(f"W{start_row + 4}:AG{start_row + 4}")  
 
-            # TODO: Save
-            workbook.save(bb_file_path)
+            # Tạo một đối tượng BytesIO để lưu workbook
+            excel_buffer = BytesIO()
+            workbook.save(excel_buffer)
+            excel_buffer.seek(0)
+
             workbook.close()
-        return send_file(f"../{bb_file_path}", as_attachment=True, download_name=fileName, mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+        
+        # Trả về file từ bộ nhớ
+        return send_file(
+            excel_buffer, 
+            as_attachment=True, 
+            download_name=fileName, 
+            mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        )
+        # return send_file(f"../{bb_file_path}", as_attachment=True, download_name=fileName, mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
     except NotFound:
         return jsonify({"msg": "Id không hợp lệ!"}), 404
     except Exception as e:
@@ -455,7 +469,7 @@ def get_gcn_kiem_dinh(id):
             sheet[f"F32"] = dongho.so_tem if dongho.so_tem else ""
             sheet[f"Z32"] = dongho.hieu_luc_bien_ban.strftime("%d/%m/%Y") if dongho.hieu_luc_bien_ban else ""
             sheet[f"S35"] = f"Hà Nội, ngày {dongho.ngay_thuc_hien.strftime('%d')} tháng {dongho.ngay_thuc_hien.strftime('%m')} năm {dongho.ngay_thuc_hien.strftime('%Y')}" if dongho.ngay_thuc_hien else ""
-            sheet[f"A43"] = str(dongho.nguoi_kiem_dinh).upper() if dongho.nguoi_kiem_dinh else ""
+            sheet[f"A43"] = str(dongho.nguoi_thuc_hien).upper() if dongho.nguoi_thuc_hien else ""
 
 
             desired_height = row_heights * 28.35
@@ -464,12 +478,165 @@ def get_gcn_kiem_dinh(id):
                 sheet.row_dimensions[row].height = desired_height
 
             # TODO: Save
-            workbook.save(gcn_file_path)
+            # workbook.save(gcn_file_path)
+
+            excel_buffer = BytesIO()
+            workbook.save(excel_buffer)
+            excel_buffer.seek(0)
+
             workbook.close()
-        return send_file(f"../{gcn_file_path}", as_attachment=True, download_name=fileName, mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+        
+        # Trả về file từ bộ nhớ thay vì lưu file vào hệ thống
+        return send_file(
+            excel_buffer, 
+            as_attachment=True, 
+            download_name=fileName, 
+            mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        )
+        # return send_file(f"../{gcn_file_path}", as_attachment=True, download_name=fileName, mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
     except NotFound:
         return jsonify({"msg": "Id không hợp lệ!"}), 404
     except Exception as e:
         print("GCN: " + str(e))
+        return jsonify({"msg": f"Đã có lỗi xảy ra: {str(e)}"}), 500
+
+
+
+@export_bp.route("/kiemdinh/hc/<string:id>", methods=["GET"])
+def get_hieu_chuan(id):
+    row_heights = 0.69 #cm
+
+    try:
+        decoded_id = decode(id)
+        dongho = DongHo.query.filter_by(id=decoded_id).first_or_404()
+        dongho_dict = dongho.to_dict()
+        if "du_lieu_kiem_dinh" in dongho_dict:
+            try:
+                dongho_dict["du_lieu_kiem_dinh"] = json.loads(
+                    dongho_dict["du_lieu_kiem_dinh"]
+                )
+            except json.JSONDecodeError as e:
+                return jsonify({"msg": "Có lỗi xảy ra khi trích xuất dữ liệu! Hãy thử lại"}), 400
+        
+        fileName = (
+            "HC"
+            + ("_" + dongho.so_giay_chung_nhan if dongho.so_giay_chung_nhan else "")
+            + ("_" + dongho.ten_khach_hang if dongho.ten_khach_hang else "")
+            + ("_" + dongho.ten_dong_ho if dongho.ten_dong_ho else "")
+            + ("_" + dongho.dn if dongho.dn else "")
+            + ("_" + dongho.ngay_thuc_hien.strftime("%d-%m-%Y") if dongho.ngay_thuc_hien else "")
+            + ".xlsx"
+        )
+
+        hc_file_path = f"excels/export/HC/{fileName}"
+        hc_directory = os.path.dirname(hc_file_path)
+
+        # Ensure the directory exists
+        if not os.path.exists(hc_directory):
+            os.makedirs(hc_directory)
+
+        if not os.path.exists(hc_file_path):
+            src_file = "excels/GCN_ExcelForm.xlsx"
+            workbook = openpyxl.load_workbook(src_file)
+            sheet = workbook.active
+            so_giay = f"FMS.HC.{dongho.so_giay_chung_nhan}.{dongho.ngay_thuc_hien.strftime('%y')}" if dongho.so_giay_chung_nhan and dongho.ngay_thuc_hien else ""
+            sheet[f"BL4"] = so_giay
+            sheet[f"BB6"] = round(float(dongho.nhiet_do), 1) if isinstance(dongho.nhiet_do, (int, float)) else dongho.nhiet_do if dongho.nhiet_do else ""
+            sheet[f"BJ6"] = round(float(dongho.do_am), 1) if isinstance(dongho.do_am, (int, float)) else dongho.do_am if dongho.do_am else ""
+
+            for merged_range in sheet.merged_cells.ranges:
+                print(merged_range)
+
+            # sheet.unmerge_cells('Q8')
+            for merged_range in sheet.merged_cells.ranges:
+                if "Q8" in str(merged_range):  # Kiểm tra nếu Q8 nằm trong vùng hợp nhất
+                    print(f"Đang bỏ hợp nhất: {merged_range}")
+                    sheet.unmerge_cells(str(merged_range))
+                    break  # Chỉ bỏ hợp nhất 1 vùng, không ảnh hưởng đến các vùng khác
+
+            # Gán giá trị mới vào Q8
+            sheet[f"Q8"] = so_giay
+            sheet[f"J10"] = dongho.phuong_tien_do if dongho.phuong_tien_do else ""
+
+
+            sheet[f"H12"] = dongho.co_so_san_xuat if dongho.co_so_san_xuat else ""
+            sheet[f"H14"] = (f"Sensor: {dongho.kieu_sensor}" if dongho.kieu_chi_thi else dongho.kieu_sensor) if dongho.kieu_sensor else ""
+            sheet[f"H15"] = f"Chỉ thị: {dongho.kieu_chi_thi}" if dongho.kieu_chi_thi else ""
+
+            sheet[f"AA14"] = (f"Sensor: {dongho.seri_sensor}" if dongho.seri_chi_thi else dongho.seri_sensor) if dongho.seri_sensor else ""
+            sheet[f"AA15"] = f"Chỉ thị: {dongho.seri_chi_thi}" if dongho.seri_chi_thi else ""
+
+            # sheet[f"AA16"] = dongho.dn if dongho.dn else ""
+
+            # sheet[f"Y17"] = "Q3=" if dongho.q3 else "Qn="
+            # sheet[f"Z17"] = dongho.q3 if dongho.q3 else dongho.qn
+            
+            sheet[f"N18"] = "-" if dongho.ccx else ""
+            sheet[f"O18"] = f"Cấp chính xác: {dongho.ccx}" if dongho.ccx else ""
+            sheet[f"X18"] = f"Tỷ số Q3/Q1: (R) = {dongho.r}" if dongho.r else ""
+
+            sheet[f"N19"] = "-" if dongho.k_factor else ""
+            sheet[f"O19"] = f"Hệ số K: {dongho.k_factor}" if dongho.k_factor else ""
+
+            sheet[f"H20"] = dongho.co_so_su_dung if dongho.co_so_su_dung else ""
+            sheet[f"H21"] = dongho.vi_tri if dongho.vi_tri else ""           
+            sheet[f"H22"] = "" 
+
+            # sheet[f"L23"] = dongho.phuong_phap_thuc_hien if dongho.phuong_phap_thuc_hien else ""
+            # sheet[f"L24"] = PP_THUC_HIEN[dongho.phuong_phap_thuc_hien] if dongho.phuong_phap_thuc_hien else ""   
+
+            # sheet[f"K25"] = dongho.chuan_thiet_bi_su_dung if dongho.chuan_thiet_bi_su_dung else ""   
+
+            sheet[f"F27"] = dongho.so_tem if dongho.so_tem else ""
+
+            # sheet[f"AB27"] = dongho.hieu_luc_bien_ban.strftime("%d/%m/%Y") if dongho.hieu_luc_bien_ban else ""
+
+            sheet[f"R30"] = f"Hà Nội, ngày {dongho.ngay_thuc_hien.strftime('%d')} tháng {dongho.ngay_thuc_hien.strftime('%m')} năm {dongho.ngay_thuc_hien.strftime('%Y')}" if dongho.ngay_thuc_hien else ""
+            sheet[f"B39"] = str(dongho.nguoi_thuc_hien).upper() if dongho.nguoi_thuc_hien else ""
+
+            
+            # du_lieu = dongho_dict['du_lieu_kiem_dinh']['du_lieu']
+            # hieu_sai_so = list(dongho_dict['du_lieu_kiem_dinh']['hieu_sai_so'])
+            # mf = list(dongho_dict['du_lieu_kiem_dinh']['mf'])
+            # titles = ["Q3","Q2","Q1"] if dongho.q3 else ['Qn', "Qt", "Qmin"] 
+
+            # sheet[f"AV11"] = du_lieu[titles[2]] if du_lieu[titles[2]] else "-"
+            # sheet[f"BA11"] = hieu_sai_so[2]['hss'] if hieu_sai_so[2]['hss'] else "-" 
+            # sheet[f"BF11"] = mf[2]['mf'] if mf[2]['mf'] else "-" 
+
+            # sheet[f"AV13"] = du_lieu[titles[1]] if du_lieu[titles[1]] else "-"
+            # sheet[f"BA13"] = hieu_sai_so[1]['hss'] if hieu_sai_so[1]['hss'] else "-" 
+            # sheet[f"BF13"] = mf[1]['mf'] if mf[1]['mf'] else "-" 
+
+            # sheet[f"AV15"] = du_lieu[titles[0]] if du_lieu[titles[0]] else "-"
+            # sheet[f"BA15"] = hieu_sai_so[0]['hss'] if hieu_sai_so[0]['hss'] else "-" 
+            # sheet[f"BF15"] = mf[0]['mf'] if mf[0]['mf'] else "-" 
+
+            desired_height = row_heights * 28.35
+            # Run from row: 2
+            for row in range(2, sheet.max_row + 1):
+                sheet.row_dimensions[row].height = desired_height
+
+            # TODO: Save
+            # workbook.save(hc_file_path)
+
+            excel_buffer = BytesIO()
+            workbook.save(excel_buffer)
+            excel_buffer.seek(0)
+
+            workbook.close()
+        
+        # Trả về file từ bộ nhớ thay vì lưu file vào hệ thống
+        return send_file(
+            excel_buffer, 
+            as_attachment=True, 
+            download_name=fileName, 
+            mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        )
+        # return send_file(f"../{hc_file_path}", as_attachment=True, download_name=fileName, mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+    except NotFound:
+        return jsonify({"msg": "Id không hợp lệ!"}), 404
+    except Exception as e:
+        print("HC: " + str(e))
         return jsonify({"msg": f"Đã có lỗi xảy ra: {str(e)}"}), 500
 
