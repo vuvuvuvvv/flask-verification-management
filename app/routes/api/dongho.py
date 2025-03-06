@@ -561,7 +561,11 @@ def create_dongho():
                 if not (1 <= ngay_thuc_hien_date.month <= 12):
                     return jsonify({"msg": "Tháng không hợp lệ trong ngày thực hiện!"}), 400
 
-                if data.get("q3"):
+                if data.get("is_hieu_chuan"):
+                    hieu_luc_bien_ban = _get_last_day_of_month_in_future(
+                        1, ngay_thuc_hien_date
+                    )
+                elif data.get("q3"):
                     hieu_luc_bien_ban = _get_last_day_of_month_in_future(
                         3, ngay_thuc_hien_date
                     )
@@ -596,7 +600,10 @@ def create_dongho():
             "updated_at":  datetime.utcnow().isoformat(),
         }
         new_dongho = DongHo(
+            ma_quan_ly=data.get("ma_quan_ly"),
+
             ket_qua_check_vo_ngoai=data.get("ket_qua_check_vo_ngoai"),
+
             ghi_chu_vo_ngoai=data.get("ghi_chu_vo_ngoai") if data.get("ghi_chu_vo_ngoai") else "",
             is_hieu_chuan=data.get("is_hieu_chuan"),
             index=data.get("index"),
@@ -663,6 +670,9 @@ def create_dongho():
 def update_dongho(id):
     try:
         data = request.get_json()
+        du_lieu_kiem_dinh = data.get("du_lieu_kiem_dinh")
+        if isinstance(du_lieu_kiem_dinh, dict):
+            du_lieu_kiem_dinh = json.dumps(du_lieu_kiem_dinh)
 
         try:
             decoded_id = decode(id)
@@ -698,7 +708,11 @@ def update_dongho(id):
                 except ValueError as e:
                     return jsonify({"msg": f"Invalid date format: {str(e)}"}), 400
 
-                if data.get("q3"):
+                if data.get("is_hieu_chuan"):
+                    hieu_luc_bien_ban = _get_last_day_of_month_in_future(
+                        1, ngay_thuc_hien_date
+                    )
+                elif data.get("q3"):
                     hieu_luc_bien_ban = _get_last_day_of_month_in_future(
                         3, ngay_thuc_hien_date
                     )
@@ -727,6 +741,8 @@ def update_dongho(id):
                 400,
             )
         field_titles = {
+            "ma_quan_ly": "Mã quản lý",
+            
             "ket_qua_check_vo_ngoai": "Kết quả kiểm tra vỏ ngoài",
             "ghi_chu_vo_ngoai": "Ghi chú vỏ ngoài",
 
@@ -766,6 +782,7 @@ def update_dongho(id):
         }
 
         # Update fields
+        dongho.ma_quan_ly = data.get("ma_quan_ly")
         dongho.ket_qua_check_vo_ngoai = data.get("ket_qua_check_vo_ngoai")
         dongho.ghi_chu_vo_ngoai = data.get("ghi_chu_vo_ngoai")
 
@@ -799,7 +816,7 @@ def update_dongho(id):
         dongho.vi_tri = data.get("vi_tri")
         dongho.nhiet_do = data.get("nhiet_do")
         dongho.do_am = data.get("do_am")
-        dongho.du_lieu_kiem_dinh = data.get("du_lieu_kiem_dinh")
+        dongho.du_lieu_kiem_dinh = du_lieu_kiem_dinh
         dongho.hieu_luc_bien_ban = data.get("hieu_luc_bien_ban")
         dongho.so_giay_chung_nhan = data.get("so_giay_chung_nhan")
 
@@ -808,6 +825,8 @@ def update_dongho(id):
         for key in field_titles.keys():
             original_value = getattr(dongho, key)
             new_value = data.get(key)
+            if key == "du_lieu_kiem_dinh" and isinstance(new_value, dict):
+                new_value = json.dumps(new_value)
             if original_value != new_value:
                 changed_fields.append(field_titles[key])
                 setattr(dongho, key, new_value)
@@ -825,6 +844,7 @@ def update_dongho(id):
         dongho.last_updated = json.dumps(history_entry)
 
         db.session.commit()
+        
         if os.path.exists(bb_file_path):
             os.remove(bb_file_path)
         if os.path.exists(gcn_file_path):

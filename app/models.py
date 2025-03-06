@@ -194,6 +194,8 @@ class DongHo(db.Model):
 
     id = db.Column(db.Integer, primary_key=True)
 
+    ma_quan_ly = db.Column(db.String(255), nullable=True, index=True)
+
     ket_qua_check_vo_ngoai = db.Column(db.Boolean, default=False)
     ghi_chu_vo_ngoai = db.Column(db.String(255), default=False, nullable=True)
 
@@ -246,6 +248,7 @@ class DongHo(db.Model):
 
     def __init__(
         self,
+        ma_quan_ly,
         ket_qua_check_vo_ngoai,
         ghi_chu_vo_ngoai,
         is_hieu_chuan,
@@ -286,6 +289,7 @@ class DongHo(db.Model):
         so_giay_chung_nhan,
         last_updated,
     ):
+        self.ma_quan_ly = ma_quan_ly
         self.ket_qua_check_vo_ngoai = ket_qua_check_vo_ngoai
         self.ghi_chu_vo_ngoai = ghi_chu_vo_ngoai
         self.is_hieu_chuan = is_hieu_chuan
@@ -329,6 +333,7 @@ class DongHo(db.Model):
     def to_dict(self):
         return {
             "id": encode(self.id), 
+            "ma_quan_ly": self.ma_quan_ly,
             "ket_qua_check_vo_ngoai": self.ket_qua_check_vo_ngoai,
             "ghi_chu_vo_ngoai": self.ghi_chu_vo_ngoai,
             "is_hieu_chuan": self.is_hieu_chuan,
