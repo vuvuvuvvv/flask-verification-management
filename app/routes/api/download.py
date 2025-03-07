@@ -15,7 +15,7 @@ import shutil
 
 import os
 
-export_bp = Blueprint("export", __name__)
+download_bp = Blueprint("download", __name__)
 
 class DuLieuMotLanChay:
     def __init__(self, V1: float, V2: float, Vc1: float, Vc2: float):
@@ -46,7 +46,7 @@ def get_sai_so_dong_ho(form_value: DuLieuMotLanChay) -> float:
 
     return None
 
-@export_bp.route("/kiemdinh/bienban/<string:id>", methods=["GET"])
+@download_bp.route("/kiemdinh/bienban/<string:id>", methods=["GET"])
 def get_bb_kiem_dinh(id):
     row_heights = 0.69 #cm
 
@@ -397,7 +397,7 @@ def get_bb_kiem_dinh(id):
         return jsonify({"msg": f"Đã có lỗi xảy ra: {str(e)}"}), 500
 
 
-@export_bp.route("/kiemdinh/gcn/<string:id>", methods=["GET"])
+@download_bp.route("/kiemdinh/gcn/<string:id>", methods=["GET"])
 def get_gcn_kiem_dinh(id):
     row_heights = 0.69 #cm
 
@@ -502,7 +502,7 @@ def get_gcn_kiem_dinh(id):
 
 
 
-@export_bp.route("/kiemdinh/hc/<string:id>", methods=["GET"])
+@download_bp.route("/kiemdinh/hc/<string:id>", methods=["GET"])
 def get_hieu_chuan(id):
     row_heights = 0.69 #cm
 
@@ -536,7 +536,7 @@ def get_hieu_chuan(id):
             os.makedirs(hc_directory)
 
         if not os.path.exists(hc_file_path):
-            src_file = "excels/GCN_ExcelForm.xlsx"
+            src_file = "excels/HC_ExcelForm.xlsx"
             workbook = openpyxl.load_workbook(src_file)
             sheet = workbook.active
             so_giay = f"FMS.HC.{dongho.so_giay_chung_nhan}.{dongho.ngay_thuc_hien.strftime('%y')}" if dongho.so_giay_chung_nhan and dongho.ngay_thuc_hien else ""
@@ -544,32 +544,23 @@ def get_hieu_chuan(id):
             sheet[f"BB6"] = round(float(dongho.nhiet_do), 1) if isinstance(dongho.nhiet_do, (int, float)) else dongho.nhiet_do if dongho.nhiet_do else ""
             sheet[f"BJ6"] = round(float(dongho.do_am), 1) if isinstance(dongho.do_am, (int, float)) else dongho.do_am if dongho.do_am else ""
 
-            for merged_range in sheet.merged_cells.ranges:
-                print(merged_range)
-
-            # sheet.unmerge_cells('Q8')
-            for merged_range in sheet.merged_cells.ranges:
-                if "Q8" in str(merged_range):  # Kiểm tra nếu Q8 nằm trong vùng hợp nhất
-                    print(f"Đang bỏ hợp nhất: {merged_range}")
-                    sheet.unmerge_cells(str(merged_range))
-                    break  # Chỉ bỏ hợp nhất 1 vùng, không ảnh hưởng đến các vùng khác
-
-            # Gán giá trị mới vào Q8
             sheet[f"Q8"] = so_giay
             sheet[f"J10"] = dongho.phuong_tien_do if dongho.phuong_tien_do else ""
 
-
             sheet[f"H12"] = dongho.co_so_san_xuat if dongho.co_so_san_xuat else ""
+            sheet[f"Z12"] = "Mã Quản lý:" if dongho.ma_quan_ly else ""
+            sheet[f"AA12"] = dongho.ma_quan_ly if dongho.ma_quan_ly else ""
+            
             sheet[f"H14"] = (f"Sensor: {dongho.kieu_sensor}" if dongho.kieu_chi_thi else dongho.kieu_sensor) if dongho.kieu_sensor else ""
             sheet[f"H15"] = f"Chỉ thị: {dongho.kieu_chi_thi}" if dongho.kieu_chi_thi else ""
 
             sheet[f"AA14"] = (f"Sensor: {dongho.seri_sensor}" if dongho.seri_chi_thi else dongho.seri_sensor) if dongho.seri_sensor else ""
             sheet[f"AA15"] = f"Chỉ thị: {dongho.seri_chi_thi}" if dongho.seri_chi_thi else ""
 
-            # sheet[f"AA16"] = dongho.dn if dongho.dn else ""
+            sheet[f"AA16"] = dongho.dn if dongho.dn else ""
 
-            # sheet[f"Y17"] = "Q3=" if dongho.q3 else "Qn="
-            # sheet[f"Z17"] = dongho.q3 if dongho.q3 else dongho.qn
+            sheet[f"Y17"] = "Q3=" if dongho.q3 else "Qn="
+            sheet[f"Z17"] = dongho.q3 if dongho.q3 else dongho.qn
             
             sheet[f"N18"] = "-" if dongho.ccx else ""
             sheet[f"O18"] = f"Cấp chính xác: {dongho.ccx}" if dongho.ccx else ""
@@ -582,35 +573,35 @@ def get_hieu_chuan(id):
             sheet[f"H21"] = dongho.vi_tri if dongho.vi_tri else ""           
             sheet[f"H22"] = "" 
 
-            # sheet[f"L23"] = dongho.phuong_phap_thuc_hien if dongho.phuong_phap_thuc_hien else ""
-            # sheet[f"L24"] = PP_THUC_HIEN[dongho.phuong_phap_thuc_hien] if dongho.phuong_phap_thuc_hien else ""   
+            sheet[f"L23"] = dongho.phuong_phap_thuc_hien if dongho.phuong_phap_thuc_hien else ""
+            sheet[f"L24"] = PP_THUC_HIEN[dongho.phuong_phap_thuc_hien] if dongho.phuong_phap_thuc_hien else ""   
 
-            # sheet[f"K25"] = dongho.chuan_thiet_bi_su_dung if dongho.chuan_thiet_bi_su_dung else ""   
+            sheet[f"K25"] = dongho.chuan_thiet_bi_su_dung if dongho.chuan_thiet_bi_su_dung else ""   
 
             sheet[f"F27"] = dongho.so_tem if dongho.so_tem else ""
 
-            # sheet[f"AB27"] = dongho.hieu_luc_bien_ban.strftime("%d/%m/%Y") if dongho.hieu_luc_bien_ban else ""
+            sheet[f"AB27"] = dongho.hieu_luc_bien_ban.strftime("%d/%m/%Y") if dongho.hieu_luc_bien_ban else ""
 
             sheet[f"R30"] = f"Hà Nội, ngày {dongho.ngay_thuc_hien.strftime('%d')} tháng {dongho.ngay_thuc_hien.strftime('%m')} năm {dongho.ngay_thuc_hien.strftime('%Y')}" if dongho.ngay_thuc_hien else ""
             sheet[f"B39"] = str(dongho.nguoi_thuc_hien).upper() if dongho.nguoi_thuc_hien else ""
 
             
-            # du_lieu = dongho_dict['du_lieu_kiem_dinh']['du_lieu']
-            # hieu_sai_so = list(dongho_dict['du_lieu_kiem_dinh']['hieu_sai_so'])
-            # mf = list(dongho_dict['du_lieu_kiem_dinh']['mf'])
-            # titles = ["Q3","Q2","Q1"] if dongho.q3 else ['Qn', "Qt", "Qmin"] 
+            du_lieu = dongho_dict['du_lieu_kiem_dinh']['du_lieu']
+            hieu_sai_so = list(dongho_dict['du_lieu_kiem_dinh']['hieu_sai_so'])
+            mf = list(dongho_dict['du_lieu_kiem_dinh']['mf'])
+            titles = ["Q3","Q2","Q1"] if dongho.q3 else ['Qn', "Qt", "Qmin"] 
 
-            # sheet[f"AV11"] = du_lieu[titles[2]] if du_lieu[titles[2]] else "-"
-            # sheet[f"BA11"] = hieu_sai_so[2]['hss'] if hieu_sai_so[2]['hss'] else "-" 
-            # sheet[f"BF11"] = mf[2]['mf'] if mf[2]['mf'] else "-" 
+            sheet[f"AV11"] = du_lieu[titles[2]]['value'] if du_lieu[titles[2]]['value'] else "-"
+            sheet[f"BA11"] = hieu_sai_so[2]['hss'] if hieu_sai_so[2]['hss'] else "-" 
+            sheet[f"BF11"] = mf[2]['mf'] if mf[2]['mf'] else "-" 
 
-            # sheet[f"AV13"] = du_lieu[titles[1]] if du_lieu[titles[1]] else "-"
-            # sheet[f"BA13"] = hieu_sai_so[1]['hss'] if hieu_sai_so[1]['hss'] else "-" 
-            # sheet[f"BF13"] = mf[1]['mf'] if mf[1]['mf'] else "-" 
+            sheet[f"AV13"] = du_lieu[titles[1]]['value'] if du_lieu[titles[1]]['value'] else "-"
+            sheet[f"BA13"] = hieu_sai_so[1]['hss'] if hieu_sai_so[1]['hss'] else "-" 
+            sheet[f"BF13"] = mf[1]['mf'] if mf[1]['mf'] else "-" 
 
-            # sheet[f"AV15"] = du_lieu[titles[0]] if du_lieu[titles[0]] else "-"
-            # sheet[f"BA15"] = hieu_sai_so[0]['hss'] if hieu_sai_so[0]['hss'] else "-" 
-            # sheet[f"BF15"] = mf[0]['mf'] if mf[0]['mf'] else "-" 
+            sheet[f"AV15"] = du_lieu[titles[0]]['value'] if du_lieu[titles[0]]['value'] else "-"
+            sheet[f"BA15"] = hieu_sai_so[0]['hss'] if hieu_sai_so[0]['hss'] else "-" 
+            sheet[f"BF15"] = mf[0]['mf'] if mf[0]['mf'] else "-" 
 
             desired_height = row_heights * 28.35
             # Run from row: 2

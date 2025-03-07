@@ -562,9 +562,11 @@ def create_dongho():
                     return jsonify({"msg": "Tháng không hợp lệ trong ngày thực hiện!"}), 400
 
                 if data.get("is_hieu_chuan"):
+                    print("create")
                     hieu_luc_bien_ban = _get_last_day_of_month_in_future(
                         1, ngay_thuc_hien_date
                     )
+                    print(hieu_luc_bien_ban)
                 elif data.get("q3"):
                     hieu_luc_bien_ban = _get_last_day_of_month_in_future(
                         3, ngay_thuc_hien_date
@@ -576,7 +578,6 @@ def create_dongho():
 
                 if hieu_luc_bien_ban:
                     hieu_luc_bien_ban = hieu_luc_bien_ban.date()
-            print(hieu_luc_bien_ban)
         seri_sensor = data.get("seri_sensor")
 
         existing_dongho = DongHo.query.filter(
@@ -698,7 +699,9 @@ def update_dongho(id):
 
         hieu_luc_bien_ban = None
         if data.get("so_giay_chung_nhan") and data.get("so_tem"):
+            print(1212212)
             ngay_thuc_hien = data.get("ngay_thuc_hien")
+            print(ngay_thuc_hien)
             if ngay_thuc_hien:
                 try:
                     # Use the correct format string for parsing
@@ -709,9 +712,11 @@ def update_dongho(id):
                     return jsonify({"msg": f"Invalid date format: {str(e)}"}), 400
 
                 if data.get("is_hieu_chuan"):
+                    print("sua")
                     hieu_luc_bien_ban = _get_last_day_of_month_in_future(
                         1, ngay_thuc_hien_date
                     )
+                    print(hieu_luc_bien_ban)
                 elif data.get("q3"):
                     hieu_luc_bien_ban = _get_last_day_of_month_in_future(
                         3, ngay_thuc_hien_date
@@ -817,14 +822,17 @@ def update_dongho(id):
         dongho.nhiet_do = data.get("nhiet_do")
         dongho.do_am = data.get("do_am")
         dongho.du_lieu_kiem_dinh = du_lieu_kiem_dinh
-        dongho.hieu_luc_bien_ban = data.get("hieu_luc_bien_ban")
+        dongho.hieu_luc_bien_ban = hieu_luc_bien_ban
         dongho.so_giay_chung_nhan = data.get("so_giay_chung_nhan")
 
         # Store original values and update fields
         changed_fields = []
         for key in field_titles.keys():
             original_value = getattr(dongho, key)
-            new_value = data.get(key)
+            if key == "hieu_luc_bien_ban":
+                new_value = hieu_luc_bien_ban
+            else:
+                new_value = data.get(key)
             if key == "du_lieu_kiem_dinh" and isinstance(new_value, dict):
                 new_value = json.dumps(new_value)
             if original_value != new_value:
