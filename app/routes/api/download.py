@@ -592,15 +592,15 @@ def get_hieu_chuan(id):
             titles = ["Q3","Q2","Q1"] if dongho.q3 else ['Qn', "Qt", "Qmin"] 
 
             sheet[f"AV11"] = du_lieu[titles[2]]['value'] if du_lieu[titles[2]]['value'] else "-"
-            sheet[f"BA11"] = hieu_sai_so[2]['hss'] if hieu_sai_so[2]['hss'] else "-" 
+            sheet[f"BA11"] = hieu_sai_so[2]['hss'] if hieu_sai_so[2]['hss'] != None or hieu_sai_so[2]['hss'] == 0  else "-" 
             sheet[f"BF11"] = mf[2]['mf'] if mf[2]['mf'] else "-" 
 
             sheet[f"AV13"] = du_lieu[titles[1]]['value'] if du_lieu[titles[1]]['value'] else "-"
-            sheet[f"BA13"] = hieu_sai_so[1]['hss'] if hieu_sai_so[1]['hss'] else "-" 
+            sheet[f"BA13"] = hieu_sai_so[1]['hss'] if hieu_sai_so[1]['hss'] != None or hieu_sai_so[1]['hss'] == 0  else "-" 
             sheet[f"BF13"] = mf[1]['mf'] if mf[1]['mf'] else "-" 
 
             sheet[f"AV15"] = du_lieu[titles[0]]['value'] if du_lieu[titles[0]]['value'] else "-"
-            sheet[f"BA15"] = hieu_sai_so[0]['hss'] if hieu_sai_so[0]['hss'] else "-" 
+            sheet[f"BA15"] = hieu_sai_so[0]['hss'] if hieu_sai_so[0]['hss'] != None or hieu_sai_so[0]['hss'] == 0  else "-" 
             sheet[f"BF15"] = mf[0]['mf'] if mf[0]['mf'] else "-" 
 
             desired_height = row_heights * 28.35
