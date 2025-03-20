@@ -1,4 +1,5 @@
 import os
+from flask import json
 from sqlalchemy import Integer
 from app.extensions import db
 from werkzeug.security import generate_password_hash, check_password_hash
@@ -88,16 +89,14 @@ class User(UserMixin, db.Model):
 
     def to_dict(self):
         return {
-            "id": encode(self.id),
-            "username": self.username,
-            "fullname": self.fullname,
-            "email": self.email,
-            "role": self.role.name if self.role.name else "Unknown",
-            "confirmed": 1 if self.confirmed else 0,
-            "permission" :  self.role.permissions if self.role.permissions else 0,
+            'id': encode(self.id),
+            'username': self.username,
+            'fullname': self.fullname,
+            'email': self.email,
+            'role': self.role.name if self.role.name else 'Unknown',
+            'confirmed': 1 if self.confirmed else 0,
+            'permission' :  self.role.permissions if self.role.permissions else 0,
         }
-
-
 class TokenBlacklist(db.Model):
     __tablename__ = "token_blacklist"
     id = db.Column(db.Integer, primary_key=True)
@@ -169,23 +168,23 @@ class PDM(db.Model):
 
     def to_dict(self):
         return {
-            "id": self.id,
-            "ma_tim_dong_ho_pdm": self.ma_tim_dong_ho_pdm,
-            "ten_dong_ho": self.ten_dong_ho,
-            "noi_san_xuat": self.noi_san_xuat,
-            "dn": self.dn,
-            "ccx": self.ccx,
-            "kieu_sensor": self.kieu_sensor,
-            "transmitter": self.transmitter,
-            "qn": self.qn,
-            "q3": self.q3,
-            "r": self.r,
-            "don_vi_pdm": self.don_vi_pdm,
-            "dia_chi": self.dia_chi,
-            "so_qd_pdm": self.so_qd_pdm,
-            "ngay_qd_pdm": self.ngay_qd_pdm,
-            "ngay_het_han": self.ngay_het_han,
-            "anh_pdm": self.anh_pdm,
+            'id': self.id,
+            'ma_tim_dong_ho_pdm': self.ma_tim_dong_ho_pdm,
+            'ten_dong_ho': self.ten_dong_ho,
+            'noi_san_xuat': self.noi_san_xuat,
+            'dn': self.dn,
+            'ccx': self.ccx,
+            'kieu_sensor': self.kieu_sensor,
+            'transmitter': self.transmitter,
+            'qn': self.qn,
+            'q3': self.q3,
+            'r': self.r,
+            'don_vi_pdm': self.don_vi_pdm,
+            'dia_chi': self.dia_chi,
+            'so_qd_pdm': self.so_qd_pdm,
+            'ngay_qd_pdm': self.ngay_qd_pdm,
+            'ngay_het_han': self.ngay_het_han,
+            'anh_pdm': self.anh_pdm,
         }
 
 
@@ -332,48 +331,48 @@ class DongHo(db.Model):
 
     def to_dict(self):
         return {
-            "id": encode(self.id), 
-            "ma_quan_ly": self.ma_quan_ly,
-            "ket_qua_check_vo_ngoai": self.ket_qua_check_vo_ngoai,
-            "ghi_chu_vo_ngoai": self.ghi_chu_vo_ngoai,
-            "is_hieu_chuan": self.is_hieu_chuan,
-            "index": self.index,
-            "group_id": self.group_id,
-            "ten_dong_ho": self.ten_dong_ho,
-            "phuong_tien_do": self.phuong_tien_do,
-            "seri_chi_thi": self.seri_chi_thi,
-            "seri_sensor": self.seri_sensor,
-            "kieu_chi_thi": self.kieu_chi_thi,
-            "kieu_sensor": self.kieu_sensor,
-            "kieu_thiet_bi": self.kieu_thiet_bi,
-            "co_so_san_xuat": self.co_so_san_xuat,
-            "so_tem": self.so_tem,
-            "nam_san_xuat": self.nam_san_xuat,
-            "dn": self.dn,
-            "d": self.d,
-            "ccx": self.ccx,
-            "q3": self.q3,
-            "r": self.r,
-            "qn": self.qn,
-            "k_factor": self.k_factor,
-            "so_qd_pdm": self.so_qd_pdm,
-            "ten_khach_hang": self.ten_khach_hang,
-            "co_so_su_dung": self.co_so_su_dung,
-            "phuong_phap_thuc_hien": self.phuong_phap_thuc_hien,
-            "chuan_thiet_bi_su_dung": self.chuan_thiet_bi_su_dung,
-            "nguoi_thuc_hien": self.nguoi_thuc_hien,
-            "nguoi_soat_lai": self.nguoi_soat_lai,
-            "ngay_thuc_hien": self.ngay_thuc_hien,
-            "noi_su_dung": self.noi_su_dung,
-            "vi_tri": self.vi_tri,
-            "noi_thuc_hien": self.noi_thuc_hien,
-            "nhiet_do": self.nhiet_do,
-            "do_am": self.do_am,
-            "du_lieu_kiem_dinh": self.du_lieu_kiem_dinh,
-            "hieu_luc_bien_ban": self.hieu_luc_bien_ban,
-            "so_giay_chung_nhan": self.so_giay_chung_nhan,
-            "last_updated": self.last_updated,
-            "owner": None if not self.user else self.user.to_dict()
+            'id': encode(self.id), 
+            'ma_quan_ly': self.ma_quan_ly,
+            'ket_qua_check_vo_ngoai': self.ket_qua_check_vo_ngoai,
+            'ghi_chu_vo_ngoai': self.ghi_chu_vo_ngoai,
+            'is_hieu_chuan': self.is_hieu_chuan,
+            'index': self.index,
+            'group_id': self.group_id,
+            'ten_dong_ho': self.ten_dong_ho,
+            'phuong_tien_do': self.phuong_tien_do,
+            'seri_chi_thi': self.seri_chi_thi,
+            'seri_sensor': self.seri_sensor,
+            'kieu_chi_thi': self.kieu_chi_thi,
+            'kieu_sensor': self.kieu_sensor,
+            'kieu_thiet_bi': self.kieu_thiet_bi,
+            'co_so_san_xuat': self.co_so_san_xuat,
+            'so_tem': self.so_tem,
+            'nam_san_xuat': self.nam_san_xuat,
+            'dn': self.dn,
+            'd': self.d,
+            'ccx': self.ccx,
+            'q3': self.q3,
+            'r': self.r,
+            'qn': self.qn,
+            'k_factor': self.k_factor,
+            'so_qd_pdm': self.so_qd_pdm,
+            'ten_khach_hang': self.ten_khach_hang,
+            'co_so_su_dung': self.co_so_su_dung,
+            'phuong_phap_thuc_hien': self.phuong_phap_thuc_hien,
+            'chuan_thiet_bi_su_dung': self.chuan_thiet_bi_su_dung,
+            'nguoi_thuc_hien': self.nguoi_thuc_hien,
+            'nguoi_soat_lai': self.nguoi_soat_lai,
+            'ngay_thuc_hien': self.ngay_thuc_hien,
+            'noi_su_dung': self.noi_su_dung,
+            'vi_tri': self.vi_tri,
+            'noi_thuc_hien': self.noi_thuc_hien,
+            'nhiet_do': self.nhiet_do,
+            'do_am': self.do_am,
+            'du_lieu_kiem_dinh': self.du_lieu_kiem_dinh,
+            'hieu_luc_bien_ban': self.hieu_luc_bien_ban,
+            'so_giay_chung_nhan': self.so_giay_chung_nhan,
+            'last_updated': self.last_updated,
+            'owner': None if not self.user else self.user.to_dict()
         }
 
 
@@ -402,12 +401,12 @@ class NhomDongHoPayment(db.Model):
 
     def to_dict(self):
         return {
-            "id": encode(self.id),
-            "group_id": self.group_id,
-            "is_paid": self.is_paid,
-            "paid_date": self.paid_date,
-            "payment_collector": self.payment_collector,
-            "last_updated": self.last_updated,
+            'id': encode(self.id),
+            'group_id': self.group_id,
+            'is_paid': self.is_paid,
+            'paid_date': self.paid_date,
+            'payment_collector': self.payment_collector,
+            'last_updated': self.last_updated,
         }
 
 
@@ -432,10 +431,10 @@ class DongHoPermissions(db.Model):
 
     def to_dict(self):
         return {
-            "id": encode(self.id),
-            "dongho":  None if not self.dongho else self.dongho.to_dict(),
-            "user":  None if not self.user else self.user.to_dict(),
-            "manager":  None if not self.mng else self.mng.to_dict(),
-            "role":  None if not self.role else self.role.name,
+            'id': encode(self.id),
+            'dongho':  None if not self.dongho else self.dongho.to_dict(),
+            'user':  None if not self.user else self.user.to_dict(),
+            'manager':  None if not self.mng else self.mng.to_dict(),
+            'role':  None if not self.role else self.role.name,
         }
 

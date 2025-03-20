@@ -12,13 +12,14 @@ def create_app(config_class=Config):
     app = Flask(__name__)
     app.config.from_object(config_class)
 
+    import logging
+    logging.basicConfig(level=logging.DEBUG)
+
     origins = [
         os.getenv("CLIENT_BASE_URL")
     ]
     
     CORS(app, supports_credentials=True, resources={r"/*": {"origins": origins}})
-    
-
 
     jwt = JWTManager(app)
     jwt.token_in_blocklist_loader(check_if_token_in_blacklist)
