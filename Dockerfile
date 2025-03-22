@@ -1,21 +1,25 @@
 # Stage 1: Build
-FROM python:3.12-alpine AS base
+FROM python:3.10-slim AS base
 
 # Set the working directory in the container
 WORKDIR /app
+RUN apt update && apt install -y \
+  gcc \       
+  libpq-dev \
+  python3-dev \
+  postgresql-client \
+  build-essential
 
-# Install necessary packages including postgresql-client
-RUN apk add --no-cache postgresql-client
-
-# Copy the requirements file into the container
+# Copy only necessary files first (ignore migrations/)
 COPY requirements.txt requirements.txt
 
 # Upgrade pip and install the Python dependencies
 RUN pip install --upgrade pip
 RUN pip install -r requirements.txt
 
-# Copy the rest of the application's code into the container
-COPY . .
+# Copy the rest of the application's code, but exclude migrations/
+COPY . /app
+RUN rm -rf /app/migrations  # Chắc chắn xóa migrations/
 
 # Stage 2: Run
 FROM base
@@ -23,27 +27,31 @@ FROM base
 # Set the working directory in the container
 WORKDIR /app
 
-# Copy the dependencies from the build stage
-COPY --from=base /app /app
-
 # Set the FLASK_APP environment variable
 ENV FLASK_APP=manage:app
+# Set to use print()
+ENV PYTHONUNBUFFERED=1        
 
-# Define the command to run the application
+# Expose the port
+EXPOSE 5000
+
+
+# CMD script
 CMD ["sh", "-c", " \
-  until pg_isready -h postgres; do \
+  timeout=30; \
+  while ! pg_isready -h postgres; do \
     >&2 echo 'Postgres is unavailable - sleeping'; \
-    sleep 1; \      
+    sleep 1; \
+    timeout=$((timeout-1)); \
+    if [ $timeout -le 0 ]; then \
+      >&2 echo 'Postgres failed to start'; \
+      exit 1; \
+    fi; \
   done; \
   >&2 echo 'Postgres is up - executing command'; \
-  heads=$(flask db heads | tr -d '[],' | tr -s ' ' | sed 's/ (head)//g'); \
-  echo 'Heads: ' $heads; \
-  if [ $(echo $heads | wc -w) -gt 1 ]; then \
-    flask db merge -m 'merge heads' $heads; \
+  if [ ! -d 'migrations/versions' ]; then \
+    flask db init && flask db migrate -m 'Initial migration'; \
   fi; \
-  flask db history; \
-  flask db upgrade && python seed/seed.py && python manage.py run \
+  >&2 echo 'Postgres is up - executing command'; \
+  flask db upgrade && python init_db/seed.py && flask run --host=0.0.0.0 \
 "]
-
-# Expose the port the app runs on
-EXPOSE 5000

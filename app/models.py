@@ -119,7 +119,7 @@ class PDM(db.Model):
     noi_san_xuat = db.Column(db.String(255), nullable=False)
     dn = db.Column(db.String(255), nullable=True)
     ccx = db.Column(db.String(255), nullable=True)
-    kieu_sensor = db.Column(db.String(255), nullable=False)
+    sensor = db.Column(db.String(255), nullable=False)
     transmitter = db.Column(db.String(255), nullable=True)  # kieu chi thi
     qn = db.Column(db.String(255), nullable=True)
     q3 = db.Column(db.String(255), nullable=True)
@@ -138,7 +138,7 @@ class PDM(db.Model):
         noi_san_xuat,
         dn,
         ccx,
-        kieu_sensor,
+        sensor,
         transmitter,
         qn,
         q3,
@@ -155,7 +155,7 @@ class PDM(db.Model):
         self.noi_san_xuat = noi_san_xuat
         self.dn = dn
         self.ccx = ccx
-        self.kieu_sensor = kieu_sensor
+        self.sensor = sensor
         self.transmitter = transmitter
         self.qn = qn
         self.q3 = q3
@@ -175,7 +175,7 @@ class PDM(db.Model):
             "noi_san_xuat": self.noi_san_xuat,
             "dn": self.dn,
             "ccx": self.ccx,
-            "kieu_sensor": self.kieu_sensor,
+            "sensor": self.sensor,
             "transmitter": self.transmitter,
             "qn": self.qn,
             "q3": self.q3,
@@ -191,32 +191,22 @@ class PDM(db.Model):
 
 class DongHo(db.Model):
     __tablename__ = "dongho"
-
     id = db.Column(db.Integer, primary_key=True)
-
-    ma_quan_ly = db.Column(db.String(255), nullable=True, index=True)
-
-    ket_qua_check_vo_ngoai = db.Column(db.Boolean, default=False)
-    ghi_chu_vo_ngoai = db.Column(db.String(255), default=False, nullable=True)
+    ten_phuong_tien_do = db.Column(db.String(255), nullable=True)
 
     is_hieu_chuan = db.Column(db.Boolean, default=False)    # hiệu chuẩn
-
     index = db.Column(db.Integer, default=0)
 
-    # Nhóm đồng hồ: TENDONGHO+DN+CCX+Q3+R+QN+NGAYTHUCHIEN   (DDMMYYHHmmss)
     group_id = db.Column(db.String(255), nullable=True, index=True)
 
-    ten_dong_ho = db.Column(db.String(255), nullable=False, index=True)
+    sensor = db.Column(db.String(255), nullable=True, index=True)      # kiểu model 
+    transitor = db.Column(db.String(255), nullable=True, index=True)     # kiểm model
 
-    phuong_tien_do = db.Column(db.String(255), nullable=True)
-    seri_chi_thi = db.Column(db.String(255), nullable=True, index=True)
-    seri_sensor = db.Column(db.String(255), nullable=True, index=True)
-    kieu_chi_thi = db.Column(db.String(255), nullable=True, index=True)
-    kieu_sensor = db.Column(db.String(255), nullable=True, index=True)
-    kieu_thiet_bi = db.Column(db.String(255), nullable=True)
+    serial = db.Column(db.String(255), nullable=True, index=True)           # số
+
     co_so_san_xuat = db.Column(db.String(255), nullable=True)
-    so_tem = db.Column(db.String(255), nullable=True)
     nam_san_xuat = db.Column(db.Date, nullable=True)
+
     dn = db.Column(db.String(255), nullable=True)
     d = db.Column(db.String(255), nullable=True)
     ccx = db.Column(db.String(255), nullable=True)
@@ -225,45 +215,51 @@ class DongHo(db.Model):
     qn = db.Column(db.String(255), nullable=True)
     k_factor = db.Column(db.String(255), nullable=True)
     so_qd_pdm = db.Column(db.String(255), nullable=True)
-    ten_khach_hang = db.Column(db.String(255), nullable=True)
+
+    so_tem = db.Column(db.String(255), nullable=True)
+    so_giay_chung_nhan = db.Column(db.String(255), nullable=True, index=True)
+
     co_so_su_dung = db.Column(db.String(255), nullable=True)
-    noi_su_dung = db.Column(db.String(255), nullable=True)
-    vi_tri = db.Column(db.String(255), nullable=True)  # dia diem noi su dung
-    noi_thuc_hien = db.Column(db.String(255), nullable=True)
     phuong_phap_thuc_hien = db.Column(db.String(255), nullable=True)
     chuan_thiet_bi_su_dung = db.Column(db.String(255), nullable=True)
     nguoi_thuc_hien = db.Column(db.String(255), nullable=True)
-    nguoi_soat_lai = db.Column(db.String(255), nullable=True)
     ngay_thuc_hien = db.Column(db.Date, nullable=True)
-    hieu_luc_bien_ban = db.Column(db.Date, nullable=True)
-    nhiet_do = db.Column(db.String(255), nullable=True)
-    do_am = db.Column(db.String(255), nullable=True)
+    
+    dia_diem_thuc_hien = db.Column(db.String(255), nullable=True)
+
+    ket_qua_check_vo_ngoai = db.Column(db.Boolean, default=False)
+    ket_qua_check_do_kin = db.Column(db.Boolean, default=False)
+    ket_qua_check_do_on_dinh_chi_so = db.Column(db.Boolean, default=False)
+
     du_lieu_kiem_dinh = db.Column(db.Text, nullable=True)
-    so_giay_chung_nhan = db.Column(db.String(255), nullable=True, index=True)
+    nguoi_soat_lai = db.Column(db.String(255), nullable=True)
+
+    hieu_luc_bien_ban = db.Column(db.Date, nullable=True)
     last_updated = db.Column(db.Text, nullable=True)
-    owner_id = db.Column(db.Integer, db.ForeignKey("user.id"), index=True)
+    
+    # noi_su_dung = db.Column(db.String(255), nullable=True)
+    # vi_tri = db.Column(db.String(255), nullable=True)  # dia diem noi su dung
+    # nhiet_do = db.Column(db.String(255), nullable=True)
+    # do_am = db.Column(db.String(255), nullable=True)
+    # owner_id = db.Column(db.Integer, db.ForeignKey("user.id"), index=True)
 
     # Define the relationship to the User model
-    user = db.relationship("User", foreign_keys=[owner_id], backref="user_dongho")
+    # user = db.relationship("User", foreign_keys=[owner_id], backref="user_dongho")
 
     def __init__(
         self,
-        ma_quan_ly,
-        ket_qua_check_vo_ngoai,
-        ghi_chu_vo_ngoai,
+        ten_phuong_tien_do,
         is_hieu_chuan,
         index,
         group_id,
-        ten_dong_ho,
-        phuong_tien_do,
-        seri_chi_thi,
-        seri_sensor,
-        kieu_chi_thi,
-        kieu_sensor,
-        kieu_thiet_bi,
+        
+        sensor,
+        transitor,
+        serial,
+        
         co_so_san_xuat,
-        so_tem,
         nam_san_xuat,
+
         dn,
         d,
         ccx,
@@ -272,38 +268,43 @@ class DongHo(db.Model):
         qn,
         k_factor,
         so_qd_pdm,
-        ten_khach_hang,
+
+        so_tem,
+        so_giay_chung_nhan,
+
         co_so_su_dung,
         phuong_phap_thuc_hien,
         chuan_thiet_bi_su_dung,
         nguoi_thuc_hien,
-        nguoi_soat_lai,
         ngay_thuc_hien,
-        noi_su_dung,
-        vi_tri,
-        nhiet_do,
-        do_am,
-        noi_thuc_hien,
+
+        dia_diem_thuc_hien,
+        
+        ket_qua_check_vo_ngoai,
+        ket_qua_check_do_on_dinh_chi_so,
+        ket_qua_check_do_kin,
+
         du_lieu_kiem_dinh,
+        nguoi_soat_lai,
+
         hieu_luc_bien_ban,
-        so_giay_chung_nhan,
         last_updated,
+
+        # noi_su_dung,
+        # vi_tri,
+        # nhiet_do,
+        # do_am,
     ):
-        self.ma_quan_ly = ma_quan_ly
-        self.ket_qua_check_vo_ngoai = ket_qua_check_vo_ngoai
-        self.ghi_chu_vo_ngoai = ghi_chu_vo_ngoai
+        self.ten_phuong_tien_do = ten_phuong_tien_do
         self.is_hieu_chuan = is_hieu_chuan
         self.index = index
         self.group_id = group_id
-        self.ten_dong_ho = ten_dong_ho
-        self.phuong_tien_do = phuong_tien_do
-        self.seri_chi_thi = seri_chi_thi
-        self.seri_sensor = seri_sensor
-        self.kieu_chi_thi = kieu_chi_thi
-        self.kieu_sensor = kieu_sensor
-        self.kieu_thiet_bi = kieu_thiet_bi
+
+        self.sensor = sensor
+        self.transitor = transitor
+        self.serial = serial
+
         self.co_so_san_xuat = co_so_san_xuat
-        self.so_tem = so_tem
         self.nam_san_xuat = nam_san_xuat
         self.dn = dn
         self.d = d
@@ -313,42 +314,50 @@ class DongHo(db.Model):
         self.qn = qn
         self.k_factor = k_factor
         self.so_qd_pdm = so_qd_pdm
-        self.ten_khach_hang = ten_khach_hang
+
+        self.so_tem = so_tem
+        self.so_giay_chung_nhan = so_giay_chung_nhan
+        
         self.co_so_su_dung = co_so_su_dung
         self.phuong_phap_thuc_hien = phuong_phap_thuc_hien
         self.chuan_thiet_bi_su_dung = chuan_thiet_bi_su_dung
         self.nguoi_thuc_hien = nguoi_thuc_hien
-        self.nguoi_soat_lai = nguoi_soat_lai
         self.ngay_thuc_hien = ngay_thuc_hien
-        self.noi_su_dung = noi_su_dung
-        self.vi_tri = vi_tri
-        self.nhiet_do = nhiet_do
-        self.noi_thuc_hien = noi_thuc_hien
-        self.do_am = do_am
+
+        self.dia_diem_thuc_hien = dia_diem_thuc_hien
+
+        self.ket_qua_check_vo_ngoai = ket_qua_check_vo_ngoai
+        self.ket_qua_check_do_kin = ket_qua_check_do_kin
+        self.ket_qua_check_do_on_dinh_chi_so = ket_qua_check_do_on_dinh_chi_so
+
         self.du_lieu_kiem_dinh = du_lieu_kiem_dinh
+        self.nguoi_soat_lai = nguoi_soat_lai
+
         self.hieu_luc_bien_ban = hieu_luc_bien_ban
-        self.so_giay_chung_nhan = so_giay_chung_nhan
         self.last_updated = last_updated
+
+        # self.noi_su_dung = noi_su_dung
+        # self.vi_tri = vi_tri
+        # self.nhiet_do = nhiet_do
+        # self.do_am = do_am
+
+        
 
     def to_dict(self):
         return {
             "id": encode(self.id), 
-            "ma_quan_ly": self.ma_quan_ly,
-            "ket_qua_check_vo_ngoai": self.ket_qua_check_vo_ngoai,
-            "ghi_chu_vo_ngoai": self.ghi_chu_vo_ngoai,
+            "ten_phuong_tien_do": self.ten_phuong_tien_do,
             "is_hieu_chuan": self.is_hieu_chuan,
             "index": self.index,
             "group_id": self.group_id,
-            "ten_dong_ho": self.ten_dong_ho,
-            "phuong_tien_do": self.phuong_tien_do,
-            "seri_chi_thi": self.seri_chi_thi,
-            "seri_sensor": self.seri_sensor,
-            "kieu_chi_thi": self.kieu_chi_thi,
-            "kieu_sensor": self.kieu_sensor,
-            "kieu_thiet_bi": self.kieu_thiet_bi,
+
+            "transitor": self.transitor,
+            "sensor": self.sensor,
+            "serial": self.serial,
+
             "co_so_san_xuat": self.co_so_san_xuat,
-            "so_tem": self.so_tem,
             "nam_san_xuat": self.nam_san_xuat,
+
             "dn": self.dn,
             "d": self.d,
             "ccx": self.ccx,
@@ -357,23 +366,32 @@ class DongHo(db.Model):
             "qn": self.qn,
             "k_factor": self.k_factor,
             "so_qd_pdm": self.so_qd_pdm,
-            "ten_khach_hang": self.ten_khach_hang,
+            
+            "so_tem": self.so_tem,
+            "so_giay_chung_nhan": self.so_giay_chung_nhan,
+            
             "co_so_su_dung": self.co_so_su_dung,
             "phuong_phap_thuc_hien": self.phuong_phap_thuc_hien,
             "chuan_thiet_bi_su_dung": self.chuan_thiet_bi_su_dung,
             "nguoi_thuc_hien": self.nguoi_thuc_hien,
-            "nguoi_soat_lai": self.nguoi_soat_lai,
             "ngay_thuc_hien": self.ngay_thuc_hien,
-            "noi_su_dung": self.noi_su_dung,
-            "vi_tri": self.vi_tri,
-            "noi_thuc_hien": self.noi_thuc_hien,
-            "nhiet_do": self.nhiet_do,
-            "do_am": self.do_am,
+            
+            "dia_diem_thuc_hien": self.dia_diem_thuc_hien,
+
+            "ket_qua_check_vo_ngoai": self.ket_qua_check_vo_ngoai,
+            "ket_qua_check_do_on_dinh_chi_so": self.ket_qua_check_do_on_dinh_chi_so,
+            "ket_qua_check_do_kin": self.ket_qua_check_do_kin,
+
             "du_lieu_kiem_dinh": self.du_lieu_kiem_dinh,
+            "nguoi_soat_lai": self.nguoi_soat_lai,
+
             "hieu_luc_bien_ban": self.hieu_luc_bien_ban,
-            "so_giay_chung_nhan": self.so_giay_chung_nhan,
             "last_updated": self.last_updated,
-            "owner": None if not self.user else self.user.to_dict()
+
+            # "noi_su_dung": self.noi_su_dung,
+            # "nhiet_do": self.nhiet_do,
+            # "do_am": self.do_am,
+            # "owner": None if not self.user else self.user.to_dict()
         }
 
 

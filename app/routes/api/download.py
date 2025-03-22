@@ -107,7 +107,7 @@ def get_bb_kiem_dinh(id):
                 )
 
             sheet.cell(
-                row=5, column=8, value=dongho.phuong_tien_do if dongho.phuong_tien_do else ""
+                row=5, column=8, value=dongho.ten_phuong_tien_do if dongho.ten_phuong_tien_do else ""
             )
             sheet.cell(
                 row=6,
@@ -120,11 +120,11 @@ def get_bb_kiem_dinh(id):
                 column=8,
                 value=(
                     (
-                        f"Sensor: {dongho.kieu_sensor}"
-                        if dongho.kieu_chi_thi
-                        else dongho.kieu_sensor
+                        f"Sensor: {dongho.sensor}"
+                        if dongho.transitor
+                        else dongho.sensor
                     )
-                    if dongho.kieu_sensor
+                    if dongho.sensor
                     else ""
                 ),
             )
@@ -133,7 +133,7 @@ def get_bb_kiem_dinh(id):
                 row=8,
                 column=8,
                 value=(
-                    f"Tranmistter: {dongho.kieu_chi_thi}" if dongho.kieu_chi_thi else ""
+                    f"Tranmistter: {dongho.transitor}" if dongho.transitor else ""
                 ),
             )
 
@@ -213,7 +213,7 @@ def get_bb_kiem_dinh(id):
             sheet.cell(
                 row=20,
                 column=2,
-                value=f"Địa điểm thực hiện: {dongho.noi_thuc_hien}" if dongho.noi_thuc_hien else "",
+                value=f"Địa điểm thực hiện: {dongho.dia_diem_thuc_hien}" if dongho.dia_diem_thuc_hien else "",
             )
 
             desired_height = row_heights * 28.35
@@ -438,10 +438,10 @@ def get_gcn_kiem_dinh(id):
             sheet = workbook.active
 
             sheet[f"Q10"] = f"FMS.KĐ.{dongho.so_giay_chung_nhan}.{dongho.ngay_thuc_hien.strftime('%y')}" if dongho.so_giay_chung_nhan and dongho.ngay_thuc_hien else ""
-            sheet[f"J12"] = dongho.phuong_tien_do if dongho.phuong_tien_do else ""
+            sheet[f"J12"] = dongho.ten_phuong_tien_do if dongho.ten_phuong_tien_do else ""
             sheet[f"H14"] = dongho.co_so_san_xuat if dongho.co_so_san_xuat else ""
-            sheet[f"H16"] = dongho.kieu_sensor if dongho.kieu_sensor else ""
-            sheet[f"H17"] = f"Chỉ thị: {dongho.kieu_chi_thi}" if dongho.kieu_chi_thi else ""
+            sheet[f"H16"] = dongho.sensor if dongho.sensor else ""
+            sheet[f"H17"] = f"Chỉ thị: {dongho.transitor}" if dongho.transitor else ""
             sheet[f"X16"] = dongho.seri_sensor if dongho.seri_sensor else ""
             sheet[f"X17"] = f"Chỉ thị: {dongho.seri_chi_thi}" if dongho.seri_chi_thi else ""
             sheet[f"AA18"] = dongho.dn if dongho.dn else ""
@@ -476,9 +476,6 @@ def get_gcn_kiem_dinh(id):
             # Run from row: 2
             for row in range(2, sheet.max_row + 1):
                 sheet.row_dimensions[row].height = desired_height
-
-            # TODO: Save
-            # workbook.save(gcn_file_path)
 
             excel_buffer = BytesIO()
             workbook.save(excel_buffer)
@@ -545,14 +542,14 @@ def get_hieu_chuan(id):
             sheet[f"BJ6"] = round(float(dongho.do_am), 1) if isinstance(dongho.do_am, (int, float)) else dongho.do_am if dongho.do_am else ""
 
             sheet[f"Q8"] = so_giay
-            sheet[f"J10"] = dongho.phuong_tien_do if dongho.phuong_tien_do else ""
+            sheet[f"J10"] = dongho.ten_phuong_tien_do if dongho.ten_phuong_tien_do else ""
 
             sheet[f"H12"] = dongho.co_so_san_xuat if dongho.co_so_san_xuat else ""
             sheet[f"Z12"] = "Mã Quản lý:" if dongho.ma_quan_ly else ""
             sheet[f"AA12"] = dongho.ma_quan_ly if dongho.ma_quan_ly else ""
             
-            sheet[f"H14"] = (f"Sensor: {dongho.kieu_sensor}" if dongho.kieu_chi_thi else dongho.kieu_sensor) if dongho.kieu_sensor else ""
-            sheet[f"H15"] = f"Chỉ thị: {dongho.kieu_chi_thi}" if dongho.kieu_chi_thi else ""
+            sheet[f"H14"] = (f"Sensor: {dongho.sensor}" if dongho.transitor else dongho.sensor) if dongho.sensor else ""
+            sheet[f"H15"] = f"Chỉ thị: {dongho.transitor}" if dongho.transitor else ""
 
             sheet[f"AA14"] = (f"Sensor: {dongho.seri_sensor}" if dongho.seri_chi_thi else dongho.seri_sensor) if dongho.seri_sensor else ""
             sheet[f"AA15"] = f"Chỉ thị: {dongho.seri_chi_thi}" if dongho.seri_chi_thi else ""
@@ -607,9 +604,6 @@ def get_hieu_chuan(id):
             # Run from row: 2
             for row in range(2, sheet.max_row + 1):
                 sheet.row_dimensions[row].height = desired_height
-
-            # TODO: Save
-            # workbook.save(hc_file_path)
 
             excel_buffer = BytesIO()
             workbook.save(excel_buffer)

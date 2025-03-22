@@ -50,9 +50,9 @@ def get_pdms():
         if ccx:
             query = query.filter(PDM.ccx.ilike(f"%{ccx.replace('@gach_cheo', '/')}%"))
 
-        kieu_sensor = request.args.get("kieu_sensor")
-        if kieu_sensor:
-            query = query.filter(PDM.kieu_sensor.ilike(f"%{kieu_sensor.replace('@gach_cheo', '/')}%"))
+        sensor = request.args.get("sensor")
+        if sensor:
+            query = query.filter(PDM.sensor.ilike(f"%{sensor.replace('@gach_cheo', '/')}%"))
 
         transmitter = request.args.get("transmitter")
         if transmitter:
@@ -98,7 +98,7 @@ def create_pdm():
         noi_san_xuat=data.get("noi_san_xuat"),
         dn=data.get("dn"),
         ccx=data.get("ccx"),
-        kieu_sensor=data.get("kieu_sensor"),
+        sensor=data.get("sensor"),
         transmitter=data.get("transmitter"),
         qn=data.get("qn"),
         q3=data.get("q3"),
@@ -128,7 +128,7 @@ def update_pdm():
             existing_pdm.noi_san_xuat = data.get("noi_san_xuat")
             existing_pdm.dn = data.get("dn")
             existing_pdm.ccx = data.get("ccx")
-            existing_pdm.kieu_sensor = data.get("kieu_sensor")
+            existing_pdm.sensor = data.get("sensor")
             existing_pdm.transmitter = data.get("transmitter")
             existing_pdm.qn = data.get("qn")
             existing_pdm.q3 = data.get("q3")
@@ -149,7 +149,7 @@ def update_pdm():
                 noi_san_xuat=data.get("noi_san_xuat"),
                 dn=data.get("dn"),
                 ccx=data.get("ccx"),
-                kieu_sensor=data.get("kieu_sensor"),
+                sensor=data.get("sensor"),
                 transmitter=data.get("transmitter"),
                 qn=data.get("qn"),
                 q3=data.get("q3"),
