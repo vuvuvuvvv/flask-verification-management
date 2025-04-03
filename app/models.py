@@ -119,7 +119,7 @@ class PDM(db.Model):
     noi_san_xuat = db.Column(db.String(255), nullable=False)
     dn = db.Column(db.String(255), nullable=True)
     ccx = db.Column(db.String(255), nullable=True)
-    sensor = db.Column(db.String(255), nullable=False)
+    kieu_sensor = db.Column(db.String(255), nullable=False)
     transmitter = db.Column(db.String(255), nullable=True)  # kieu chi thi
     qn = db.Column(db.String(255), nullable=True)
     q3 = db.Column(db.String(255), nullable=True)
@@ -138,7 +138,7 @@ class PDM(db.Model):
         noi_san_xuat,
         dn,
         ccx,
-        sensor,
+        kieu_sensor,
         transmitter,
         qn,
         q3,
@@ -155,7 +155,7 @@ class PDM(db.Model):
         self.noi_san_xuat = noi_san_xuat
         self.dn = dn
         self.ccx = ccx
-        self.sensor = sensor
+        self.kieu_sensor = kieu_sensor
         self.transmitter = transmitter
         self.qn = qn
         self.q3 = q3
@@ -175,7 +175,7 @@ class PDM(db.Model):
             "noi_san_xuat": self.noi_san_xuat,
             "dn": self.dn,
             "ccx": self.ccx,
-            "sensor": self.sensor,
+            "kieu_sensor": self.kieu_sensor,
             "transmitter": self.transmitter,
             "qn": self.qn,
             "q3": self.q3,
@@ -457,3 +457,16 @@ class DongHoPermissions(db.Model):
             "role":  None if not self.role else self.role.name,
         }
 
+class OTP(db.Model):
+    __tablename__ = 'otp'
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("user.id"))
+    otp_code = db.Column(db.String(6))
+    purpose = db.Column(db.String(64), nullable=False)  # forgot_password, reset_email, reset_password
+    created_at = db.Column(db.DateTime, nullable=False, default=datetime.now)
+    expired_at = db.Column(db.DateTime, nullable=False)
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        if not self.expired_at:  # Nếu expired_at chưa có, đặt nó = created_at + 5 phút
+            self.expired_at = self.created_at + timedelta(minutes=5)

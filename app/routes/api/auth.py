@@ -119,7 +119,6 @@ def refresh():
 
 
 @auth_bp.route("/logout", methods=["POST"])
-# @login_required
 @jwt_required()
 def logout():
 

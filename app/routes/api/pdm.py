@@ -210,10 +210,8 @@ def get_ma_tim_dong_ho_pdm(ma_tim_dong_ho_pdm):
         if not pdm:
             return jsonify({"msg": "PDM not found!"}), 404
         
-        print("pdm: ", pdm)
         return jsonify(pdm.to_dict()), 200
     except Exception as e:
-        print(f"Error fetching PDM: {e}")
         return jsonify({"msg": "An internal server error occurred!"}), 500
 
 @pdm_bp.route("/ma_tim_dong_ho_pdm/<string:ma_tim_dong_ho_pdm>", methods=["DELETE"])
