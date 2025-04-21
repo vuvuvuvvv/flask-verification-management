@@ -829,7 +829,7 @@ def update_dongho(id):
         db.session.rollback()
         return jsonify({"msg": f"Đã có lỗi xảy ra! Hãy thử lại sau."}), 500
 
-@dongho_bp.route("/dong-ho-info/<string:info>", methods=["GET"])
+@dongho_bp.route("/dongho-info/<string:info>", methods=["GET"])
 @jwt_required()
 def get_dongho_by_info(info):
     try:
