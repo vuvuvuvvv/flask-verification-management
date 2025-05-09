@@ -68,7 +68,7 @@ def get_bb_kiem_dinh(id):
             "KĐ_BB"
             + ("_" + dongho.so_giay_chung_nhan if dongho.so_giay_chung_nhan else "")
             + ("_" + dongho.ten_khach_hang if dongho.ten_khach_hang else "")
-            + ("_" + dongho.ten_dong_ho if dongho.ten_dong_ho else "")
+            # + ("_" + dongho.ten_dong_ho if dongho.ten_dong_ho else "")
             + ("_DN" + dongho.dn if dongho.dn else "")
             + ("_" + dongho.ngay_thuc_hien.strftime("%d-%m-%Y") if dongho.ngay_thuc_hien else "")
             + ".xlsx"
@@ -399,7 +399,6 @@ def get_bb_kiem_dinh(id):
 
 @download_bp.route("/kiemdinh/gcn/<string:id>", methods=["GET"])
 def get_gcn_kiem_dinh(id):
-    row_heights = 0.69 #cm
 
     try:
         decoded_id = decode(id)
@@ -415,11 +414,13 @@ def get_gcn_kiem_dinh(id):
         if not dongho_dict['du_lieu_kiem_dinh']['ket_qua']:
             return jsonify({"msg": "Đồng hồ không đạt tiêu chuẩn xuất biên bản!"}), 422
         
+        # TODO: ten_khach_hang
+
         fileName = (
             "KĐ_GCN"
             + ("_" + dongho.so_giay_chung_nhan if dongho.so_giay_chung_nhan else "")
-            + ("_" + dongho.ten_khach_hang if dongho.ten_khach_hang else "")
-            + ("_" + dongho.ten_dong_ho if dongho.ten_dong_ho else "")
+            # + ("_" + dongho.ten_khach_hang if dongho.ten_khach_hang else "")
+            # + ("_" + dongho.ten_dong_ho if dongho.ten_dong_ho else "")
             + ("_" + dongho.dn if dongho.dn else "")
             + ("_" + dongho.ngay_thuc_hien.strftime("%d-%m-%Y") if dongho.ngay_thuc_hien else "")
             + ".xlsx"
@@ -442,8 +443,8 @@ def get_gcn_kiem_dinh(id):
             sheet[f"H14"] = dongho.co_so_san_xuat if dongho.co_so_san_xuat else ""
             sheet[f"H16"] = dongho.sensor if dongho.sensor else ""
             sheet[f"H17"] = f"Chỉ thị: {dongho.transitor}" if dongho.transitor else ""
-            sheet[f"X16"] = dongho.seri_sensor if dongho.seri_sensor else ""
-            sheet[f"X17"] = f"Chỉ thị: {dongho.seri_chi_thi}" if dongho.seri_chi_thi else ""
+            # sheet[f"X16"] = dongho.seri_sensor if dongho.seri_sensor else ""
+            # sheet[f"X17"] = f"Chỉ thị: {dongho.seri_chi_thi}" if dongho.seri_chi_thi else ""
             sheet[f"AA18"] = dongho.dn if dongho.dn else ""
             sheet[f"Y19"] = "Q3=" if dongho.q3 else "Qn="
             sheet[f"Z19"] = dongho.q3 if dongho.q3 else dongho.qn
@@ -457,8 +458,8 @@ def get_gcn_kiem_dinh(id):
             sheet[f"O22"] = "Hệ số K: " if dongho.k_factor else ""
             sheet[f"S22"] = dongho.k_factor if dongho.k_factor else ""
             sheet[f"H23"] = dongho.co_so_su_dung if dongho.co_so_su_dung else ""
-            sheet[f"H25"] = dongho.noi_su_dung if dongho.noi_su_dung else ""
-            sheet[f"H27"] = dongho.vi_tri if dongho.vi_tri else ""           
+            # sheet[f"H25"] = dongho.noi_su_dung if dongho.noi_su_dung else ""
+            # sheet[f"H27"] = dongho.vi_tri if dongho.vi_tri else ""           
             sheet[f"H27"] = "" 
             sheet[f"L28"] = dongho.phuong_phap_thuc_hien if dongho.phuong_phap_thuc_hien else ""
             try:
@@ -472,10 +473,10 @@ def get_gcn_kiem_dinh(id):
             sheet[f"A43"] = str(dongho.nguoi_thuc_hien).upper() if dongho.nguoi_thuc_hien else ""
 
 
-            desired_height = row_heights * 28.35
-            # Run from row: 2
-            for row in range(2, sheet.max_row + 1):
-                sheet.row_dimensions[row].height = desired_height
+            # desired_height = row_heights * 28.35
+            # # Run from row: 2
+            # for row in range(2, sheet.max_row + 1):
+            #     sheet.row_dimensions[row].height = desired_height
 
             excel_buffer = BytesIO()
             workbook.save(excel_buffer)
@@ -519,7 +520,7 @@ def get_hieu_chuan(id):
             "HC"
             + ("_" + dongho.so_giay_chung_nhan if dongho.so_giay_chung_nhan else "")
             + ("_" + dongho.ten_khach_hang if dongho.ten_khach_hang else "")
-            + ("_" + dongho.ten_dong_ho if dongho.ten_dong_ho else "")
+            # + ("_" + dongho.ten_dong_ho if dongho.ten_dong_ho else "")
             + ("_" + dongho.dn if dongho.dn else "")
             + ("_" + dongho.ngay_thuc_hien.strftime("%d-%m-%Y") if dongho.ngay_thuc_hien else "")
             + ".xlsx"
@@ -548,11 +549,11 @@ def get_hieu_chuan(id):
             sheet[f"Z12"] = "Mã Quản lý:" if dongho.ma_quan_ly else ""
             sheet[f"AA12"] = dongho.ma_quan_ly if dongho.ma_quan_ly else ""
             
-            sheet[f"H14"] = (f"Sensor: {dongho.sensor}" if dongho.transitor else dongho.sensor) if dongho.sensor else ""
-            sheet[f"H15"] = f"Chỉ thị: {dongho.transitor}" if dongho.transitor else ""
+            # sheet[f"H14"] = (f"Sensor: {dongho.sensor}" if dongho.transitor else dongho.sensor) if dongho.sensor else ""
+            # sheet[f"H15"] = f"Chỉ thị: {dongho.transitor}" if dongho.transitor else ""
 
-            sheet[f"AA14"] = (f"Sensor: {dongho.seri_sensor}" if dongho.seri_chi_thi else dongho.seri_sensor) if dongho.seri_sensor else ""
-            sheet[f"AA15"] = f"Chỉ thị: {dongho.seri_chi_thi}" if dongho.seri_chi_thi else ""
+            # sheet[f"AA14"] = (f"Sensor: {dongho.seri_sensor}" if dongho.seri_chi_thi else dongho.seri_sensor) if dongho.seri_sensor else ""
+            # sheet[f"AA15"] = f"Chỉ thị: {dongho.seri_chi_thi}" if dongho.seri_chi_thi else ""
 
             sheet[f"AA16"] = dongho.dn if dongho.dn else ""
 
