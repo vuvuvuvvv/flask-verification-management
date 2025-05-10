@@ -914,28 +914,45 @@ def get_dongho_by_group_id(group_id):
 
         result = []
 
+        # for dongho in donghos:
+        #     dongho_dict = dongho.to_dict()
+        #     permission = DongHoPermissions.query.filter(
+        #         and_(
+        #             DongHoPermissions.dongho_id == dongho.id,
+        #             True if user.is_superadmin() else DongHoPermissions.username == current_user_identity["username"],
+        #         )
+        #     ).first()
+        #     if permission:
+        #         # Decode du_lieu_kiem_dinh if present
+        #         if "du_lieu_kiem_dinh" in dongho_dict:
+        #             try:
+        #                 dongho_dict["du_lieu_kiem_dinh"] = json.loads(
+        #                     dongho_dict["du_lieu_kiem_dinh"]
+        #                 )
+        #             except json.JSONDecodeError:
+        #                 return jsonify({"msg": "Đã có lỗi xảy ra! Hãy thử lại sau."}), 500
+
+        #         # Fetch permissions for each DongHo
+        #         dongho_dict["current_permission"] = (
+        #             user.role.name if user.is_superadmin() else permission.role.name
+        #         )
+        
+        #         result.append(dongho_dict)
+
+        result = []
         for dongho in donghos:
-            dongho_dict = dongho.to_dict()
-            permission = DongHoPermissions.query.filter(
-                and_(
-                    DongHoPermissions.dongho_id == dongho.id,
-                    True if user.is_superadmin() else DongHoPermissions.username == current_user_identity["username"],
-                )
-            ).first()
-            if permission:
-                # Decode du_lieu_kiem_dinh if present
+            if dongho:
+                dongho_dict = None if not dongho else dongho.to_dict()
                 if "du_lieu_kiem_dinh" in dongho_dict:
                     try:
                         dongho_dict["du_lieu_kiem_dinh"] = json.loads(
                             dongho_dict["du_lieu_kiem_dinh"]
                         )
-                    except json.JSONDecodeError:
-                        return jsonify({"msg": "Đã có lỗi xảy ra! Hãy thử lại sau."}), 500
-
-                # Fetch permissions for each DongHo
-                dongho_dict["current_permission"] = (
-                    user.role.name if user.is_superadmin() else permission.role.name
-                )
+                    except json.JSONDecodeError as e:
+                        return (
+                            jsonify({"msg": f"Đã có lỗi xảy ra! Hãy thử lại sau."}),
+                            500,
+                        )
 
                 result.append(dongho_dict)
 
