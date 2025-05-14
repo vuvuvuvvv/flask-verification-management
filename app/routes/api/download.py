@@ -67,7 +67,7 @@ def get_bb_kiem_dinh(id):
         fileName = (
             "KĐ_BB"
             + ("_" + dongho.so_giay_chung_nhan if dongho.so_giay_chung_nhan else "")
-            # + ("_" + dongho.ten_khach_hang if dongho.ten_khach_hang else "")
+            + ("_" + dongho.ten_khach_hang if dongho.ten_khach_hang else "")
             # + ("_" + dongho.ten_dong_ho if dongho.ten_dong_ho else "")
             + ("_DN" + dongho.dn if dongho.dn else "")
             + ("_" + dongho.ngay_thuc_hien.strftime("%d-%m-%Y") if dongho.ngay_thuc_hien else "")
@@ -186,8 +186,8 @@ def get_bb_kiem_dinh(id):
             
             # TODO: noi_sd
             # # H7
-            # if dongho.co_so_su_dung:
-            #     sheet.cell(row=14, column=8, value=dongho.noi_su_dung)
+            if dongho.co_so_su_dung:
+                sheet.cell(row=14, column=8, value=dongho.noi_su_dung)
 
             # K10
             if dongho.phuong_phap_thuc_hien:
@@ -467,7 +467,7 @@ def get_gcn_kiem_dinh(id):
         fileName = (
             "KĐ_GCN"
             + ("_" + dongho.so_giay_chung_nhan if dongho.so_giay_chung_nhan else "")
-            # + ("_" + dongho.ten_khach_hang if dongho.ten_khach_hang else "")
+            + ("_" + dongho.ten_khach_hang if dongho.ten_khach_hang else "")
             # + ("_" + dongho.ten_dong_ho if dongho.ten_dong_ho else "")
             + ("_" + dongho.dn if dongho.dn else "")
             + ("_" + dongho.ngay_thuc_hien.strftime("%d-%m-%Y") if dongho.ngay_thuc_hien else "")
@@ -506,7 +506,7 @@ def get_gcn_kiem_dinh(id):
             sheet[f"O22"] = "Hệ số K: " if dongho.k_factor else ""
             sheet[f"S22"] = dongho.k_factor if dongho.k_factor else ""
             sheet[f"H23"] = dongho.co_so_su_dung if dongho.co_so_su_dung else ""
-            # sheet[f"H25"] = dongho.noi_su_dung if dongho.noi_su_dung else ""
+            sheet[f"H25"] = dongho.noi_su_dung if dongho.noi_su_dung else ""
             # sheet[f"H27"] = dongho.vi_tri if dongho.vi_tri else ""           # khong co
             sheet[f"H27"] = "" 
             sheet[f"L28"] = dongho.phuong_phap_thuc_hien if dongho.phuong_phap_thuc_hien else ""
@@ -567,7 +567,7 @@ def get_hieu_chuan(id):
         fileName = (
             "HC"
             + ("_" + dongho.so_giay_chung_nhan if dongho.so_giay_chung_nhan else "")
-            # + ("_" + dongho.ten_khach_hang if dongho.ten_khach_hang else "")
+            + ("_" + dongho.ten_khach_hang if dongho.ten_khach_hang else "")
             # + ("_" + dongho.ten_dong_ho if dongho.ten_dong_ho else "")
             + ("_" + dongho.dn if dongho.dn else "")
             + ("_" + dongho.ngay_thuc_hien.strftime("%d-%m-%Y") if dongho.ngay_thuc_hien else "")

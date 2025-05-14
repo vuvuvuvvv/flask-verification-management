@@ -97,7 +97,6 @@ class User(UserMixin, db.Model):
             "permission" :  self.role.permissions if self.role.permissions else 0,
         }
 
-
 class TokenBlacklist(db.Model):
     __tablename__ = "token_blacklist"
     id = db.Column(db.Integer, primary_key=True)
@@ -108,7 +107,6 @@ class TokenBlacklist(db.Model):
     def __init__(self, jti, expires_at):
         self.jti = jti
         self.expires_at = expires_at
-
 
 class PDM(db.Model):
     __tablename__ = "pdm"
@@ -188,7 +186,6 @@ class PDM(db.Model):
             "anh_pdm": self.anh_pdm,
         }
 
-
 class DongHo(db.Model):
     __tablename__ = "dongho"
     id = db.Column(db.Integer, primary_key=True)
@@ -237,7 +234,8 @@ class DongHo(db.Model):
     hieu_luc_bien_ban = db.Column(db.Date, nullable=True)
     last_updated = db.Column(db.Text, nullable=True)
     
-    # noi_su_dung = db.Column(db.String(255), nullable=True)
+    noi_su_dung = db.Column(db.String(255), nullable=True)
+    ten_khach_hang = db.Column(db.String(255), nullable=True)
     # vi_tri = db.Column(db.String(255), nullable=True)  # dia diem noi su dung
     # nhiet_do = db.Column(db.String(255), nullable=True)
     # do_am = db.Column(db.String(255), nullable=True)
@@ -291,6 +289,7 @@ class DongHo(db.Model):
         last_updated,
 
         # noi_su_dung,
+        # ten_khach_hang,
         # vi_tri,
         # nhiet_do,
         # do_am,
@@ -336,7 +335,9 @@ class DongHo(db.Model):
         self.hieu_luc_bien_ban = hieu_luc_bien_ban
         self.last_updated = last_updated
 
-        # self.noi_su_dung = noi_su_dung
+        self.noi_su_dung = noi_su_dung
+        self.ten_khach_hang = ten_khach_hang
+
         # self.vi_tri = vi_tri
         # self.nhiet_do = nhiet_do
         # self.do_am = do_am
@@ -388,7 +389,9 @@ class DongHo(db.Model):
             "hieu_luc_bien_ban": self.hieu_luc_bien_ban,
             "last_updated": self.last_updated,
 
-            # "noi_su_dung": self.noi_su_dung,
+            "noi_su_dung": self.noi_su_dung,
+            "ten_khach_hang": self.ten_khach_hang,
+            
             # "nhiet_do": self.nhiet_do,
             # "do_am": self.do_am,
             # "owner": None if not self.user else self.user.to_dict()

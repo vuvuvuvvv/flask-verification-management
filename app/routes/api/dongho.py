@@ -593,7 +593,8 @@ def create_dongho():
             ket_qua_check_do_kin=data.get("ket_qua_check_do_kin"),
             ket_qua_check_do_on_dinh_chi_so=data.get("ket_qua_check_do_on_dinh_chi_so"),
 
-            # noi_su_dung=data.get("noi_su_dung"),
+            ten_khach_hang=data.get("ten_khach_hang"),
+            noi_su_dung=data.get("noi_su_dung"),
             # vi_tri=data.get("vi_tri"),
             # nhiet_do=data.get("nhiet_do"),
             # do_am=data.get("do_am"),
@@ -731,7 +732,8 @@ def update_dongho(id):
 
             "dia_diem_thuc_hien": "Địa điểm thực hiện",
 
-            # "noi_su_dung": "Nơi sử dụng",
+            "noi_su_dung": "Nơi sử dụng",
+            "ten_khach_hang": "Tên khách hàng",
             # "vi_tri": "Địa chỉ nơi sử dụng",
             # "nhiet_do": "Nhiệt độ",
             # "do_am": "Độ ẩm",
@@ -776,7 +778,8 @@ def update_dongho(id):
 
         dongho.dia_diem_thuc_hien = data.get("dia_diem_thuc_hien")
 
-        # dongho.noi_su_dung = data.get("noi_su_dung")
+        dongho.ten_khach_hang = data.get("ten_khach_hang")
+        dongho.noi_su_dung = data.get("noi_su_dung")
         # dongho.vi_tri = data.get("vi_tri")
         # dongho.nhiet_do = data.get("nhiet_do")
         # dongho.do_am = data.get("do_am")

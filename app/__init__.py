@@ -27,6 +27,8 @@ def create_app(config_class=Config):
     migrate.init_app(app, db)
     login_manager.init_app(app)
     mail.init_app(app)
+    
+    limiter.init_app(app)
 
     from app.routes.api.auth import auth_bp
     from app.routes.api.pdm import pdm_bp
