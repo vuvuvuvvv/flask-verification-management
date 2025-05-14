@@ -610,15 +610,15 @@ def create_dongho():
         db.session.commit()
 
         # Add permission:
-        user = User.query.filter_by(username=current_user_identity["username"]).first()
-        new_dh_permission = DongHoPermissions(
-            dongho_id=new_dongho.id,  # Now this will work
-            username=current_user_identity["username"],
-            manager=current_user_identity["username"],
-            role_id=user.role.id,
-        )
-        db.session.add(new_dh_permission)
-        db.session.commit()
+        # user = User.query.filter_by(username=current_user_identity["username"]).first()
+        # new_dh_permission = DongHoPermissions(
+        #     dongho_id=new_dongho.id,  # Now this will work
+        #     username=current_user_identity["username"],
+        #     manager=current_user_identity["username"],
+        #     role_id=user.role.id,
+        # )
+        # db.session.add(new_dh_permission)
+        # db.session.commit()
         return jsonify(new_dongho.to_dict()), 201
     except Exception as e:
         print(e)

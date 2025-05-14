@@ -288,8 +288,8 @@ class DongHo(db.Model):
         hieu_luc_bien_ban,
         last_updated,
 
-        # noi_su_dung,
-        # ten_khach_hang,
+        noi_su_dung,
+        ten_khach_hang,
         # vi_tri,
         # nhiet_do,
         # do_am,
