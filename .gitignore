@@ -4,8 +4,9 @@ vfm_env
 *.md
 *.db
 *.sqlite
-excels/export/BB/*.xlsx
-excels/export/GCN/*.xlsx
+files/export/BB/*.xlsx
+files/export/GCN/*.xlsx
+files/export/temp_files/*.xlsx
 migrations
 instance
 seed

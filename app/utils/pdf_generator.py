@@ -1,7 +1,7 @@
 # utils/pdf_generator.py
 from io import BytesIO
 
-def process_excel_bytesio_to_pdf(excel_buffer: BytesIO) -> tuple[BytesIO, str]:
+def process_excel_bytesio_to_pdf(excel_buffer: BytesIO, file_name: str) -> tuple[BytesIO, str]:
     """
     Xử lý Excel từ BytesIO, tạo PDF và trả về đường dẫn file PDF.
     """
@@ -14,7 +14,7 @@ def process_excel_bytesio_to_pdf(excel_buffer: BytesIO) -> tuple[BytesIO, str]:
     os.makedirs(TEMP_DIR, exist_ok=True)
 
     timestamp = datetime.datetime.now().strftime("%d%m%y_%H%M%S")
-    temp_excel_filename = f"temp_excel_{timestamp}.xlsx"
+    temp_excel_filename = f"temp_{file_name}_{timestamp}.xlsx"
     temp_excel_path = os.path.join(TEMP_DIR, temp_excel_filename)
 
     excel_buffer.seek(0)
@@ -22,10 +22,10 @@ def process_excel_bytesio_to_pdf(excel_buffer: BytesIO) -> tuple[BytesIO, str]:
         f.write(excel_buffer.read())
 
     # Gọi lại hàm gốc
-    return process_excel_to_pdf(temp_excel_path)
+    return process_excel_to_pdf(temp_excel_path, file_name)
 
 
-def process_excel_to_pdf(source_excel_path: str) -> tuple[BytesIO, str]:
+def process_excel_to_pdf(source_excel_path: str, file_name: str) -> tuple[BytesIO, str]:
     """
     Xử lý file Excel đầu vào và trả về buffer chứa PDF sau khi đã xoá watermark.
     
@@ -51,9 +51,9 @@ def process_excel_to_pdf(source_excel_path: str) -> tuple[BytesIO, str]:
     output_pdf_path_base = os.path.join(TEMP_DIR, "output_base.pdf")
 
     # Tạo tên file tạm thời
-    source_filename = os.path.splitext(os.path.basename(source_excel_path))[0]
     timestamp = datetime.datetime.now().strftime("%d%m%y_%H%M%S")
-    temp_excel_filename = f"{source_filename}_{timestamp}.xlsx"
+    temp_excel_filename = f"{file_name}_{timestamp}.xlsx"
+    print(f"Temporary Excel file: {temp_excel_filename}")
     temp_excel_path = os.path.join(TEMP_DIR, temp_excel_filename)
     shutil.copy(source_excel_path, temp_excel_path)
 
@@ -133,11 +133,12 @@ def process_excel_to_pdf(source_excel_path: str) -> tuple[BytesIO, str]:
     pdf_buffer = add_images_to_pdf(pdf_base_path, enhanced)
 
     # Cleanup
-    for f in [temp_excel_path, pdf_base_path, pdf_kl_path] + extracted + enhanced:
+    for f in [source_excel_path, temp_excel_path, pdf_base_path, pdf_kl_path] + extracted + enhanced: #source gốc: source_excel_path
+        print(f"Deleting file: {f}")
         try:
             os.remove(f)
-        except:
-            pass
+        except Exception as e:
+            print(f"Error deleting file {f}: {e}")
 
     return pdf_buffer, filename
 

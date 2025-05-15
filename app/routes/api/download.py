@@ -428,7 +428,6 @@ def _create_sample_bb_excel_buffer_file(dongho: DongHo):
             excel_buffer.seek(0)
 
             workbook.close()
-            print(">>> Loại excel_buffer nhận được:", type(excel_buffer.seek(0)))
             return excel_buffer, fileName
     except Exception as e:
         print("Error creating sample BB Excel file: ", str(e))
@@ -467,12 +466,11 @@ def get_pdf_bb_kiem_dinh(id):
         decoded_id = decode(id)
         dongho = DongHo.query.filter_by(id=decoded_id).first_or_404()
         excel_buffer, fileName = _create_sample_bb_excel_buffer_file(dongho)
-        print(">>> Loại excel_buffer nhận được:", type(excel_buffer))
 
         if not excel_buffer:
             return jsonify({"msg": "Có lỗi xảy ra khi tạo file!"}), 500
 
-        pdf_buffer, pdf_filename = process_excel_bytesio_to_pdf(excel_buffer)
+        pdf_buffer, pdf_filename = process_excel_bytesio_to_pdf(excel_buffer, fileName)
         
         if not pdf_buffer:
             return jsonify({"msg": "Có lỗi xảy ra khi tạo file!"}), 500
