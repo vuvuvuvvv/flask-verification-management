@@ -2,6 +2,7 @@ import os
 import re
 from datetime import datetime
 from flask import Blueprint, jsonify, request, session
+
 from flask_jwt_extended import (
     JWTManager,
     create_access_token,
@@ -12,6 +13,9 @@ from flask_jwt_extended import (
 )
 from flask_login import login_user, logout_user, login_required, current_user
 from app.models import TokenBlacklist
+
+from app.extensions import limiter
+
 from app import db, login_manager
 from app.models import User
 from app.utils.jwt_helpers import clean_up_blacklist
@@ -21,7 +25,6 @@ from datetime import timedelta
 auth_bp = Blueprint("auth", __name__)
 
 jwt = JWTManager()
-
 
 @login_manager.user_loader
 def load_user(user_id):
@@ -119,10 +122,9 @@ def refresh():
 
 
 @auth_bp.route("/logout", methods=["POST"])
-# @login_required
 @jwt_required()
+@limiter.limit("5 per minute")
 def logout():
-
     try:
         logout_user()
         clean_up_blacklist()
@@ -134,9 +136,10 @@ def logout():
         db.session.add(blacklist_entry)
         db.session.commit()
         session.clear()
+        return jsonify({"status": 200, "msg": "Đăng xuất thành công!"}), 200
     except Exception as err:
         print(err)
-    return jsonify({"status": 200, "msg": "Đăng xuất thành công!"}), 200
+        return jsonify({"status": 500, "msg": "Có lỗi xảy ra, vui lòng thử lại sau!"}), 500
 
 
 @auth_bp.route("/me", methods=["GET"])

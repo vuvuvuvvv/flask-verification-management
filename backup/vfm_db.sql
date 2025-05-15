@@ -39,11 +39,11 @@ CREATE TABLE public.dongho (
     id integer NOT NULL,
     group_id character varying(255),
     ten_dong_ho character varying(255) NOT NULL,
-    phuong_tien_do character varying(255),
+    ten_phuong_tien_do character varying(255),
     seri_chi_thi character varying(255),
     seri_sensor character varying(255),
-    kieu_chi_thi character varying(255),
-    kieu_sensor character varying(255),
+    transitor character varying(255),
+    sensor character varying(255),
     kieu_thiet_bi character varying(255),
     co_so_san_xuat character varying(255),
     so_tem character varying(255),
@@ -60,7 +60,7 @@ CREATE TABLE public.dongho (
     co_so_su_dung character varying(255),
     noi_su_dung character varying(255),
     vi_tri character varying(255),
-    noi_thuc_hien character varying(255),
+    dia_diem_thuc_hien character varying(255),
     phuong_phap_thuc_hien character varying(255),
     chuan_thiet_bi_su_dung character varying(255),
     nguoi_thuc_hien character varying(255),
@@ -191,7 +191,7 @@ CREATE TABLE public.pdm (
     noi_san_xuat character varying(255) NOT NULL,
     dn character varying(255),
     ccx character varying(255),
-    kieu_sensor character varying(255) NOT NULL,
+    sensor character varying(255) NOT NULL,
     transmitter character varying(255),
     qn character varying(255),
     q3 character varying(255),
@@ -402,7 +402,7 @@ COPY public.alembic_version (version_num) FROM stdin;
 -- Data for Name: dongho; Type: TABLE DATA; Schema: public; Owner: postgres
 --
 
-COPY public.dongho (id, group_id, ten_dong_ho, phuong_tien_do, seri_chi_thi, seri_sensor, kieu_chi_thi, kieu_sensor, kieu_thiet_bi, co_so_san_xuat, so_tem, nam_san_xuat, dn, d, ccx, q3, r, qn, k_factor, so_qd_pdm, ten_khach_hang, co_so_su_dung, noi_su_dung, vi_tri, noi_thuc_hien, phuong_phap_thuc_hien, chuan_thiet_bi_su_dung, nguoi_thuc_hien, nguoi_soat_lai, ngay_thuc_hien, hieu_luc_bien_ban, nhiet_do, do_am, du_lieu_kiem_dinh, so_giay_chung_nhan, last_updated, owner_id, ket_qua_check_vo_ngoai, ghi_chu_vo_ngoai, index, is_hieu_chuan, ma_quan_ly) FROM stdin;
+COPY public.dongho (id, group_id, ten_dong_ho, ten_phuong_tien_do, seri_chi_thi, seri_sensor, transitor, sensor, kieu_thiet_bi, co_so_san_xuat, so_tem, nam_san_xuat, dn, d, ccx, q3, r, qn, k_factor, so_qd_pdm, ten_khach_hang, co_so_su_dung, noi_su_dung, vi_tri, dia_diem_thuc_hien, phuong_phap_thuc_hien, chuan_thiet_bi_su_dung, nguoi_thuc_hien, nguoi_soat_lai, ngay_thuc_hien, hieu_luc_bien_ban, nhiet_do, do_am, du_lieu_kiem_dinh, so_giay_chung_nhan, last_updated, owner_id, ket_qua_check_vo_ngoai, ghi_chu_vo_ngoai, index, is_hieu_chuan, ma_quan_ly) FROM stdin;
 38	AICHI1002100200171224111514	Aichi	Đồng hồ đo nước lạnh có cơ cấu điện tử				SU100-KR-N	Điện tử	Actechna Global SDN.BHD. - Malaysia		\N	100	0.05	2	100	200			PDM 283-2015	PhuThai	Công ty Cổ phần Hệ thống đo Lưu lượng	Công ty cổ phần nước sạch Vĩnh Phúc	CÔNG TY CỔ PHẦN ĐẦU TƯ THƯƠNG MẠI XUẤT NHẬP KHẨU PHÚ THÁI	Công ty Cổ phần Công nghệ và Thương mại FMS	ĐLVN 17 : 2017	Đồng hồ chuẩn đo nước và Bình chuẩn	Super Administrator	nsl	2024-12-17	\N	29	66	{"hieu_sai_so":[{"hss":11},{"hss":0},{"hss":1}],"du_lieu":{"Q3":{"value":100,"lan_chay":{"1":{"V1":"0.00","V2":"1.11","Vc1":"0","Vc2":"1","Tdh":22.5,"Tc":22.5}}},"Q2":{"value":0.8,"lan_chay":{"1":{"V1":"0.11","V2":"1.11","Vc1":"0","Vc2":"1","Tdh":22.5,"Tc":22.5}}},"Q1":{"value":0,"lan_chay":{"1":{"V1":"0.11","V2":"1.12","Vc1":"1","Vc2":"2","Tdh":22.5,"Tc":22.5}}},"Qn":null,"Qt":null,"Qmin":null},"ket_qua":false}		{"content": "T\\u1ea1o m\\u1edbi \\u0111\\u1ed3ng h\\u1ed3.", "updated_by": "Super Administrator - dht_superadmin@gmail.com - SuperAdministrator", "updated_at": "2025-01-02T02:44:26.633702"}	\N	\N	\N	\N	f	\N
 37	AICHI40225250261124102115	Aichi	Đồng hồ đo nước lạnh có cơ cấu điện tử	chithi_đạt	s_test_đạt		SU040-KR-n	Điện tử	Điện tử\tAichi Tokei Denki Co.,Ltd. - Nhật Bản	3a 123	\N	40	0.1	2	25	250			PDM 2272-2019	111	Công ty Cổ phần Công nghệ và Thương mại FMS	Công ty cổ phần nước sạch Vĩnh Phúc	234324	Công ty Cổ phần Công nghệ và Thương mại FMS	ĐLVN 17 : 2017	Đồng hồ chuẩn đo nước và Bình chuẩn	Admin đây	soát lại	2024-11-26	2027-11-30	25	50	{"hieu_sai_so":[{"hss":0},{"hss":0},{"hss":0}],"du_lieu":{"Q1":{"value":0.1,"lan_chay":{"1":{"Tc":23.5,"Tdh":23.5,"V1":0,"V2":"100.0","Vc1":"0","Vc2":"100"}}},"Q2":{"value":0.16,"lan_chay":{"1":{"Tc":23.5,"Tdh":23.5,"V1":0,"V2":"10.0","Vc1":"0","Vc2":"10"}}},"Q3":{"value":25,"lan_chay":{"1":{"Tc":23.5,"Tdh":23.5,"V1":0,"V2":"100.0","Vc1":"0","Vc2":"100"}}},"Qmin":null,"Qn":null,"Qt":null},"ket_qua":true}	gcn	{"content": "Thay \\u0111\\u1ed5i gi\\u00e1 tr\\u1ecb: ", "updated_by": "Nguy\\u1ec5n Th\\u1ebf V\\u0169 - nguyenvu2605021@gmail.com - Viewer", "updated_at": "2024-12-25T04:26:20.997746"}	1	\N	\N	\N	f	\N
 47	AICHI32210200070325121944	Aichi	Đồng hồ đo nước lạnh có cơ cấu điện tử	44	33	934857897	SU100-KR-N	Điện tử	ABB-Anh Quốc	555555	\N	32	1	2	10	200			\N	PhuThai	Công ty Cổ phần Đầu tư Thương mại Xuất Nhập khẩu Phú Thái	abc	CÔNG TY CỔ PHẦN ĐẦU TƯ THƯƠNG MẠI XUẤT NHẬP KHẨU PHÚ THÁI	Công ty Cổ phần Công nghệ và Thương mại FMS	FMS - PP - 02	Đồng hồ chuẩn đo nước và Bình chuẩn	Super Administrator	nsl	2025-03-07	2026-03-31	29	66	{"hieu_sai_so":[{"hss":0},{"hss":0},{"hss":0}],"mf":[{"mf":1},{"mf":1},{"mf":1}],"du_lieu":{"Q3":{"value":10,"lan_chay":{"1":{"V1":0,"V2":"1","Vc1":"0","Vc2":"1","Tdh":22,"Tc":22}}},"Q2":{"value":0.08,"lan_chay":{"1":{"V1":0,"V2":"1","Vc1":"0","Vc2":"1","Tdh":22,"Tc":22}}},"Q1":{"value":0.05,"lan_chay":{"1":{"V1":0,"V2":"1","Vc1":"0","Vc2":"1","Tdh":22,"Tc":22}}},"Qn":null,"Qt":null,"Qmin":null},"ket_qua":true}	1232222	{"content": "Thay \\u0111\\u1ed5i gi\\u00e1 tr\\u1ecb: ", "updated_by": "Super Administrator - dht_superadmin@gmail.com - SuperAdministrator", "updated_at": "2025-03-07T06:26:22.742958"}	\N	f		1	t	123123
@@ -527,7 +527,7 @@ COPY public.nhomdongho_payment (id, group_id, is_paid, paid_date, payment_collec
 -- Data for Name: pdm; Type: TABLE DATA; Schema: public; Owner: postgres
 --
 
-COPY public.pdm (id, ma_tim_dong_ho_pdm, ten_dong_ho, noi_san_xuat, dn, ccx, kieu_sensor, transmitter, qn, q3, r, don_vi_pdm, dia_chi, so_qd_pdm, ngay_qd_pdm, ngay_het_han, anh_pdm) FROM stdin;
+COPY public.pdm (id, ma_tim_dong_ho_pdm, ten_dong_ho, noi_san_xuat, dn, ccx, sensor, transmitter, qn, q3, r, don_vi_pdm, dia_chi, so_qd_pdm, ngay_qd_pdm, ngay_het_han, anh_pdm) FROM stdin;
 1	AICHI1002SU100-KR-N100200	Aichi	Aichi Tokei Denki Co.,Ltd. - Nhật Bản	100	2	SU100-KR-N			100	200	Công ty Cổ phần Hệ thống đo Lưu lượng	Lô 11, số 10 đường Kim Mã Thượng, p.Cống Vị, Q.Ba Đình, tp.Hà Nội	PDM 283	2015-03-30 00:00:00	2025-03-30 00:00:00	\N
 2	AICHI502SU050-KR-N40400	Aichi	Aichi Tokei Denki Co.,Ltd. - Nhật Bản	50	2	SU050-KR-N			40	400	Công ty Cổ phần Hệ thống đo Lưu lượng	Lô 11, số 10 đường Kim Mã Thượng, p.Cống Vị, Q.Ba Đình, tp.Hà Nội	PDM 285	2015-03-30 00:00:00	2025-03-30 00:00:00	\N
 3	AICHI1002SU100-KR-N100400	Aichi	Aichi Tokei Denki Co.,Ltd. - Nhật Bản	100	2	SU100-KR-N			100	400	Công ty Cổ phần Hệ thống đo Lưu lượng	Lô 11, số 10 đường Kim Mã Thượng, p.Cống Vị, Q.Ba Đình, tp.Hà Nội	PDM 286	2015-03-30 00:00:00	2025-03-30 00:00:00	\N
@@ -1283,17 +1283,17 @@ CREATE INDEX ix_dongho_group_id ON public.dongho USING btree (group_id);
 
 
 --
--- Name: ix_dongho_kieu_chi_thi; Type: INDEX; Schema: public; Owner: postgres
+-- Name: ix_dongho_transitor; Type: INDEX; Schema: public; Owner: postgres
 --
 
-CREATE INDEX ix_dongho_kieu_chi_thi ON public.dongho USING btree (kieu_chi_thi);
+CREATE INDEX ix_dongho_transitor ON public.dongho USING btree (transitor);
 
 
 --
--- Name: ix_dongho_kieu_sensor; Type: INDEX; Schema: public; Owner: postgres
+-- Name: ix_dongho_sensor; Type: INDEX; Schema: public; Owner: postgres
 --
 
-CREATE INDEX ix_dongho_kieu_sensor ON public.dongho USING btree (kieu_sensor);
+CREATE INDEX ix_dongho_sensor ON public.dongho USING btree (sensor);
 
 
 --
