@@ -5,6 +5,7 @@ from app import db
 from werkzeug.exceptions import NotFound
 import json
 from app.utils.url_encrypt import decode
+from app.utils.pdf_generator import process_excel_bytesio_to_pdf
 import openpyxl
 from openpyxl.drawing.image import Image
 from openpyxl.styles import Border, Side, Alignment, Font
@@ -24,7 +25,7 @@ class DuLieuMotLanChay:
         self.Vc1 = Vc1
         self.Vc2 = Vc2
 
-def get_sai_so_dong_ho(form_value: DuLieuMotLanChay) -> float:
+def _get_sai_so_dong_ho(form_value: DuLieuMotLanChay) -> float:
     if form_value:
         # Kiểm tra và chuyển đổi các giá trị sang float
         try:
@@ -46,13 +47,9 @@ def get_sai_so_dong_ho(form_value: DuLieuMotLanChay) -> float:
 
     return None
 
-@download_bp.route("/kiemdinh/bienban/<string:id>", methods=["GET"])
-def get_bb_kiem_dinh(id):
+def _create_sample_bb_excel_buffer_file(dongho: DongHo):
     row_heights = 0.69 #cm
-
     try:
-        decoded_id = decode(id)
-        dongho = DongHo.query.filter_by(id=decoded_id).first_or_404()
         dongho_dict = dongho.to_dict()
         if "du_lieu_kiem_dinh" in dongho_dict:
             try:
@@ -60,9 +57,11 @@ def get_bb_kiem_dinh(id):
                     dongho_dict["du_lieu_kiem_dinh"]
                 )
             except json.JSONDecodeError as e:
-                return jsonify({"msg": "Có lỗi xảy ra khi trích xuất dữ liệu! Hãy thử lại"}), 400
-        if not dongho_dict['du_lieu_kiem_dinh']['ket_qua']:
-            return jsonify({"msg": "Đồng hồ không đạt tiêu chuẩn xuất biên bản!"}), 422
+                print("Error decoding JSON: ", str(e))
+                return None, None
+        if dongho_dict['du_lieu_kiem_dinh']['ket_qua'] is None:
+            print(">>> Không có dữ liệu kiểm định!")
+            return None, None
         
         fileName = (
             "KĐ_BB"
@@ -74,7 +73,7 @@ def get_bb_kiem_dinh(id):
             + ".xlsx"
         )
 
-        bb_file_path = f"excels/export/BB/{fileName}"
+        bb_file_path = f"files/export/BB/{fileName}"
         bb_directory = os.path.dirname(bb_file_path)
 
         # Ensure the directory exists
@@ -82,19 +81,19 @@ def get_bb_kiem_dinh(id):
             os.makedirs(bb_directory)
 
         if not os.path.exists(bb_file_path):
-            src_file = "excels/BB_ExcelForm.xlsm"
+            src_file = "files/BB_ExcelForm.xlsm"
             workbook = openpyxl.load_workbook(src_file)
             sheet = workbook.active
 
             positions = ["22", "23", "24", "26"]
 
             for pos in positions:
-                check_img = Image("excels/data/check.png")
+                check_img = Image("files/data/check.png")
                 sheet.add_image(check_img, f"U{pos}")
                 check_img.width = 25
                 check_img.height = 25
 
-                circle_img = Image("excels/data/circle.png")
+                circle_img = Image("files/data/circle.png")
                 sheet.add_image(circle_img, f"Z{pos}")
                 circle_img.width = 25
                 circle_img.height = 25
@@ -184,7 +183,6 @@ def get_bb_kiem_dinh(id):
                 sheet.cell(row=13, column=14, value=f"Hệ số K:")
                 sheet.cell(row=13, column=19, value=dongho.k_factor)
             
-            # TODO: noi_sd
             # # H7
             if dongho.co_so_su_dung:
                 sheet.cell(row=14, column=8, value=dongho.noi_su_dung)
@@ -248,7 +246,7 @@ def get_bb_kiem_dinh(id):
                 sheet[f"B{start_row}"].number_format = 'General'
 
                 value = 0.3 * float(dl_ll['value']) if ll == "Q3" else float(dl_ll['value'])
-                sheet[f"D{start_row}"] = round(value, 2)
+                sheet[f"D{start_row}"] = round(value, 2) if value is not None else 0.0
                 sheet[f"D{start_row}"].alignment = center_align
                 sheet[f"D{start_row}"].font = font_12
                 sheet[f"D{start_row}"].number_format = 'General'
@@ -276,10 +274,10 @@ def get_bb_kiem_dinh(id):
 
                     sheet.merge_cells(f"O{start_row}:Q{start_row}")
                     try:
-                        delta_v = round(get_float(val['V2']) - get_float(val['V1']), 2)
+                        delta_v = round(get_float(val['V2']) - get_float(val['V1']), 2) if val not in [None, ''] and val['V2'] and val['V1'] and (get_float(val['V2']) - get_float(val['V1']) != 0) else 0.0
                         sheet[f"O{start_row}"] = delta_v
                     except ValueError:
-                        sheet[f"O{start_row}"] = "Lỗi"
+                        sheet[f"O{start_row}"] = "-"
                     sheet[f"O{start_row}"].alignment = center_align
                     sheet[f"O{start_row}"].font = font_12
                     sheet[f"O{start_row}"].number_format = 'General'
@@ -304,10 +302,10 @@ def get_bb_kiem_dinh(id):
 
                     sheet.merge_cells(f"AB{start_row}:AD{start_row}")
                     try:
-                        delta_vc = round(get_float(val['Vc2']) - get_float(val['Vc1']), 2)
+                        delta_vc = round(get_float(val['Vc2']) - get_float(val['Vc1']), 2) if val and val['Vc2'] and val['Vc1'] and get_float(val['Vc2']) - get_float(val['Vc1']) != 0 else 0.0
                         sheet[f"AB{start_row}"] = delta_vc
                     except ValueError:
-                        sheet[f"AB{start_row}"] = "Lỗi"
+                        sheet[f"AB{start_row}"] = "-"
                     sheet[f"AB{start_row}"].alignment = center_align
                     sheet[f"AB{start_row}"].font = font_12
                     sheet[f"AB{start_row}"].number_format = 'General'
@@ -326,20 +324,20 @@ def get_bb_kiem_dinh(id):
                     except ValueError:
                         du_lieu_instance = DuLieuMotLanChay(0.0, 0.0, 0.0, 0.0)
 
-                    sai_so = round(get_sai_so_dong_ho(du_lieu_instance), 2)
+                    sai_so = round(_get_sai_so_dong_ho(du_lieu_instance), 2) if du_lieu_instance and _get_sai_so_dong_ho(du_lieu_instance) is not None else None
                     if hss is None:
                         hss = sai_so
                     else:
                         hss -= sai_so
 
-                    sheet[f"AG{start_row}"] = sai_so if sai_so is not None else "Lỗi"
+                    sheet[f"AG{start_row}"] = sai_so if sai_so is not None else "-"
                     sheet[f"AG{start_row}"].alignment = center_align
                     sheet[f"AG{start_row}"].font = font_12
                     sheet[f"AG{start_row}"].number_format = 'General'
 
                     start_row += 1
 
-                sheet[f"AJ{tmp_start_row}"] = round(hss, 2) if hss is not None else round(hieu_sai_so[index]['hss'], 2)
+                sheet[f"AJ{tmp_start_row}"] = round(hss, 2) if hss is not None else round(hieu_sai_so[index]['hss'], 2) 
                 sheet[f"AJ{tmp_start_row}"].alignment = center_align
                 sheet[f"AJ{tmp_start_row}"].font = font_12
                 sheet[f"AJ{tmp_start_row}"].number_format = 'General'
@@ -423,13 +421,30 @@ def get_bb_kiem_dinh(id):
             sheet[f"B{start_row + 4}"].font = font_13
             sheet[f"V{start_row + 4}"].alignment = center_align
             sheet[f"V{start_row + 4}"].font = font_13
+
             # Tạo một đối tượng BytesIO để lưu workbook
             excel_buffer = BytesIO()
             workbook.save(excel_buffer)
             excel_buffer.seek(0)
 
             workbook.close()
+            print(">>> Loại excel_buffer nhận được:", type(excel_buffer.seek(0)))
+            return excel_buffer, fileName
+    except Exception as e:
+        print("Error creating sample BB Excel file: ", str(e))
+        return None, None
         
+
+@download_bp.route("/kiemdinh/bienban/<string:id>", methods=["GET"])
+def get_excel_bb_kiem_dinh(id):
+    try:
+        decoded_id = decode(id)
+        dongho = DongHo.query.filter_by(id=decoded_id).first_or_404()
+        excel_buffer, fileName = _create_sample_bb_excel_buffer_file(dongho)
+
+        if not excel_buffer:
+            return jsonify({"msg": "Có lỗi xảy ra khi tạo file!"}), 500
+
         # Trả về file từ bộ nhớ
         return send_file(
             excel_buffer, 
@@ -441,13 +456,43 @@ def get_bb_kiem_dinh(id):
     except NotFound:
         return jsonify({"msg": "Id không hợp lệ!"}), 404
     except Exception as e:
-        print("BB: " + str(e))
         return jsonify({"msg": f"Đã có lỗi xảy ra: {str(e)}"}), 500
 
 
+
+@download_bp.route("/kiemdinh/bienban/pdf/<string:id>", methods=["GET"])
+def get_pdf_bb_kiem_dinh(id):
+
+    try:
+        decoded_id = decode(id)
+        dongho = DongHo.query.filter_by(id=decoded_id).first_or_404()
+        excel_buffer, fileName = _create_sample_bb_excel_buffer_file(dongho)
+        print(">>> Loại excel_buffer nhận được:", type(excel_buffer))
+
+        if not excel_buffer:
+            return jsonify({"msg": "Có lỗi xảy ra khi tạo file!"}), 500
+
+        pdf_buffer, pdf_filename = process_excel_bytesio_to_pdf(excel_buffer)
+        
+        if not pdf_buffer:
+            return jsonify({"msg": "Có lỗi xảy ra khi tạo file!"}), 500
+
+        # Trả về file từ bộ nhớ
+        return send_file(
+            pdf_buffer, 
+            as_attachment=True, 
+            download_name=fileName, 
+            mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        )
+        # return send_file(f"../{bb_file_path}", as_attachment=True, download_name=fileName, mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+    except NotFound:
+        return jsonify({"msg": "Id không hợp lệ!"}), 404
+    except Exception as e:
+        print("BB: " + str(e))
+        return jsonify({"msg": f"Đã có lỗi xảy ra: {str(e)}"}), 500
+
 @download_bp.route("/kiemdinh/gcn/<string:id>", methods=["GET"])
 def get_gcn_kiem_dinh(id):
-
     try:
         decoded_id = decode(id)
         dongho = DongHo.query.filter_by(id=decoded_id).first_or_404()
@@ -474,7 +519,7 @@ def get_gcn_kiem_dinh(id):
             + ".xlsx"
         )
 
-        gcn_file_path = f"excels/export/GCN/{fileName}"
+        gcn_file_path = f"files/export/GCN/{fileName}"
         gcn_directory = os.path.dirname(gcn_file_path)
 
         # Ensure the directory exists
@@ -482,7 +527,7 @@ def get_gcn_kiem_dinh(id):
             os.makedirs(gcn_directory)
 
         if not os.path.exists(gcn_file_path):
-            src_file = "excels/GCN_ExcelForm.xlsm"
+            src_file = "files/GCN_ExcelForm.xlsm"
             workbook = openpyxl.load_workbook(src_file)
             sheet = workbook.active
 
@@ -546,8 +591,6 @@ def get_gcn_kiem_dinh(id):
         print("GCN: " + str(e))
         return jsonify({"msg": f"Đã có lỗi xảy ra: {str(e)}"}), 500
 
-
-
 @download_bp.route("/kiemdinh/hc/<string:id>", methods=["GET"])
 def get_hieu_chuan(id):
     row_heights = 0.69 #cm
@@ -574,7 +617,7 @@ def get_hieu_chuan(id):
             + ".xlsx"
         )
 
-        hc_file_path = f"excels/export/HC/{fileName}"
+        hc_file_path = f"files/export/HC/{fileName}"
         hc_directory = os.path.dirname(hc_file_path)
 
         # Ensure the directory exists
@@ -582,7 +625,7 @@ def get_hieu_chuan(id):
             os.makedirs(hc_directory)
 
         if not os.path.exists(hc_file_path):
-            src_file = "excels/HC_ExcelForm.xlsm"
+            src_file = "files/HC_ExcelForm.xlsm"
             workbook = openpyxl.load_workbook(src_file)
             sheet = workbook.active
             so_giay = f"FMS.HC.{dongho.so_giay_chung_nhan}.{dongho.ngay_thuc_hien.strftime('%y')}" if dongho.so_giay_chung_nhan and dongho.ngay_thuc_hien else ""
