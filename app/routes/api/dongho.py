@@ -7,8 +7,6 @@ from sqlalchemy import and_, or_, cast, Integer
 from app.models import (
     DongHo,
     PDM,
-    NhomDongHoPayment,
-    DongHoPermissions,
     Role,
     User,
 )
@@ -100,11 +98,6 @@ def get_nhom_dongho():
             grouped_query.offset(limit * (page-1)).limit(limit).all()
         )
 
-        NDH_payment = {
-            payment.group_id: payment.is_paid
-            for payment in NhomDongHoPayment.query.all()
-        }
-
         result_list = [
             {
                 "group_id": row.group_id,
@@ -113,7 +106,7 @@ def get_nhom_dongho():
                 "co_so_su_dung": row.co_so_su_dung,
                 "nguoi_thuc_hien": row.nguoi_thuc_hien,
                 "ngay_thuc_hien": row.ngay_thuc_hien,
-                "is_paid": NDH_payment.get(row.group_id, False),
+                "is_paid": True,
             }
             for row in result
         ]
@@ -127,11 +120,7 @@ def get_nhom_dongho():
 @jwt_required()
 def get_nhom_dongho_with_permission(username):
     try:
-        # Query DongHoPermissions to get all DongHo entries with the specified username
-        queryDHP = DongHoPermissions.query.filter(
-            DongHoPermissions.username == username,
-            DongHo.is_hieu_chuan == False
-        ).join(DongHo)
+        queryDHP = DongHo.query
 
         # Apply filters if needed (similar to get_donghos_with_permission)
         so_giay_chung_nhan = request.args.get("so_giay_chung_nhan")
@@ -202,10 +191,6 @@ def get_nhom_dongho_with_permission(username):
         )
 
         # Fetch payment status
-        NDH_payment = {
-            payment.group_id: payment.is_paid
-            for payment in NhomDongHoPayment.query.all()
-        }
 
         # Prepare the result list
         result_list = [
@@ -216,7 +201,7 @@ def get_nhom_dongho_with_permission(username):
                 "co_so_su_dung": row.co_so_su_dung,
                 "nguoi_thuc_hien": row.nguoi_thuc_hien,
                 "ngay_thuc_hien": row.ngay_thuc_hien,
-                "is_paid": NDH_payment.get(row.group_id, False),
+                "is_paid": True,
             }
             for row in result
         ]
@@ -357,15 +342,12 @@ def get_donghos():
 def get_donghos_with_permission(username):
     try:
 
-        queryDHP = DongHoPermissions.query.filter(
-            DongHoPermissions.username == username,
-            DongHo.is_hieu_chuan == False
-        ).join(DongHo)
+        queryDHP = DongHo.query
 
         so_giay_chung_nhan = request.args.get("so_giay_chung_nhan")
         if so_giay_chung_nhan:
             queryDHP = queryDHP.filter(
-                DongHoPermissions.dongho.so_giay_chung_nhan.ilike(
+                DongHo.so_giay_chung_nhan.ilike(
                     f"%{so_giay_chung_nhan}%"
                 )
             )
@@ -388,7 +370,7 @@ def get_donghos_with_permission(username):
                     ngay_kiem_dinh_from, "%a %b %d %Y %H:%M:%S GMT%z"
                 )
                 queryDHP = queryDHP.filter(
-                    DongHoPermissions.dongho.ngay_thuc_hien >= ngay_kiem_dinh_from
+                    DongHo.ngay_thuc_hien >= ngay_kiem_dinh_from
                 )
             except ValueError as e:
                 return (
@@ -411,7 +393,7 @@ def get_donghos_with_permission(username):
                     ngay_kiem_dinh_to, "%a %b %d %Y %H:%M:%S GMT%z"
                 )
                 queryDHP = queryDHP.filter(
-                    DongHoPermissions.dongho.ngay_thuc_hien <= ngay_kiem_dinh_to
+                    DongHo.ngay_thuc_hien <= ngay_kiem_dinh_to
                 )
             except ValueError as e:
                 return (
@@ -609,16 +591,6 @@ def create_dongho():
         db.session.add(new_dongho)
         db.session.commit()
 
-        # Add permission:
-        # user = User.query.filter_by(username=current_user_identity["username"]).first()
-        # new_dh_permission = DongHoPermissions(
-        #     dongho_id=new_dongho.id,  # Now this will work
-        #     username=current_user_identity["username"],
-        #     manager=current_user_identity["username"],
-        #     role_id=user.role.id,
-        # )
-        # db.session.add(new_dh_permission)
-        # db.session.commit()
         return jsonify(new_dongho.to_dict()), 201
     except Exception as e:
         print(e)
@@ -916,33 +888,6 @@ def get_dongho_by_group_id(group_id):
         ).all()
 
         result = []
-
-        # for dongho in donghos:
-        #     dongho_dict = dongho.to_dict()
-        #     permission = DongHoPermissions.query.filter(
-        #         and_(
-        #             DongHoPermissions.dongho_id == dongho.id,
-        #             True if user.is_superadmin() else DongHoPermissions.username == current_user_identity["username"],
-        #         )
-        #     ).first()
-        #     if permission:
-        #         # Decode du_lieu_kiem_dinh if present
-        #         if "du_lieu_kiem_dinh" in dongho_dict:
-        #             try:
-        #                 dongho_dict["du_lieu_kiem_dinh"] = json.loads(
-        #                     dongho_dict["du_lieu_kiem_dinh"]
-        #                 )
-        #             except json.JSONDecodeError:
-        #                 return jsonify({"msg": "Đã có lỗi xảy ra! Hãy thử lại sau."}), 500
-
-        #         # Fetch permissions for each DongHo
-        #         dongho_dict["current_permission"] = (
-        #             user.role.name if user.is_superadmin() else permission.role.name
-        #         )
-        
-        #         result.append(dongho_dict)
-
-        result = []
         for dongho in donghos:
             if dongho:
                 dongho_dict = None if not dongho else dongho.to_dict()
@@ -967,92 +912,15 @@ def get_dongho_by_group_id(group_id):
         print(e)
         return jsonify({"msg": "Đã có lỗi xảy ra! Hãy thử lại sau."}), 500
 
-@dongho_bp.route("/payment-status", methods=["PUT"])
-@jwt_required()
-def update_payment_status():
-    try:
-        data = request.get_json()
-        group_id = data.get("group_id")
-        username = data.get("username") if data.get("username") else ""
-        new_payment_status = data.get("new_payment_status")
-
-        if not group_id or new_payment_status is None:
-            return (
-                jsonify({"msg": "Group ID và trạng thái thanh toán mới là bắt buộc!"}),
-                400,
-            )
-
-        try:
-            decoded_group_id = group_id
-        except Exception as e:
-            return jsonify({"msg": "Id không hợp lệ!"}), 404
-
-        nhom_dongho_payment = NhomDongHoPayment.query.filter_by(
-            group_id=decoded_group_id
-        ).first()
-
-        if nhom_dongho_payment:
-            nhom_dongho_payment.is_paid = new_payment_status
-        else:
-            nhom_dongho_payment = NhomDongHoPayment(
-                group_id=decoded_group_id,
-                is_paid=new_payment_status,
-                payment_collector=username,
-            )
-            db.session.add(nhom_dongho_payment)
-
-        current_user_identity = get_jwt_identity()
-
-        history_entry = {
-            "content": (
-                "Chuyển trạng thái " + "đã"
-                if new_payment_status
-                else "chưa" + " thanh toán."
-            ),
-            "updated_by": f"{current_user_identity['fullname']} - {current_user_identity['email']} - {current_user_identity['role']}",
-            "updated_at": datetime.utcnow().isoformat(),
-        }
-
-        nhom_dongho_payment.last_updated = json.dumps(history_entry)
-
-        db.session.commit()
-
-        return jsonify({"msg": "Cập nhật trạng thái thanh toán thành công!"}), 200
-    except Exception as e:
-        db.session.rollback()
-        return jsonify({"msg": f"Đã có lỗi xảy ra! Hãy thử lại sau."}), 500
-
 # Lấy ra toàn bộ phân quyền của dongho
 @dongho_bp.route("/user-permissions/<string:id>", methods=["GET"])
 @jwt_required()
 def get_user_permissions(id):
     try:
-        current_user_identity = get_jwt_identity()
-        user = User.query.filter_by(username=current_user_identity["username"]).first()
+        #TODO: 
 
-        try:
-            decoded_id = decode(id)
-        except Exception as e:
-            return jsonify({"msg": "Id không hợp lệ!"}), 404
-
-        if user.is_superadmin():
-            user_permissions = DongHoPermissions.query.filter(
-                and_(DongHoPermissions.dongho_id == decoded_id)
-            ).all()
-        else:
-            user_permissions = DongHoPermissions.query.filter(
-                and_(
-                    DongHoPermissions.dongho_id == decoded_id,
-                    DongHoPermissions.manager == current_user_identity["username"],
-                    DongHoPermissions.username != current_user_identity["username"],
-                )
-            ).all()
 
         result = []
-        for up in user_permissions:
-            result.append(
-                {"id": encode(up.id), "user": up.user.to_dict(), "role": up.role.name}
-            )
         return jsonify(result), 200
     except NotFound:
         return jsonify({"msg": "Id không hợp lệ!"}), 404
@@ -1065,46 +933,6 @@ def get_user_permissions(id):
 @jwt_required()
 def check_user_info_and_dh_id_for_dongho_permissions(id, user_info):
     try:
-
-        if not user_info or not id:
-            return jsonify({"msg": "Thông tin là bắt buộc!"}), 400
-
-        try:
-            decoded_id = decode(id)
-        except Exception as e:
-            return jsonify({"msg": "Id không hợp lệ!"}), 404
-
-        dongho = DongHo.query.filter_by(id=decoded_id).first()
-        if not dongho:
-            return jsonify({"msg": "Đã có lỗi xảy ra! Hãy thử lại sau."}), 500
-
-        existing_user = User.query.filter(
-            or_(
-                User.username == user_info,
-                User.email == user_info,
-            )
-        ).first()
-        if not existing_user:
-            return jsonify({"msg": "Người dùng không tồn tại!"}), 404
-
-        existing_permission = DongHoPermissions.query.filter(
-            and_(
-                DongHoPermissions.username == existing_user.username,
-                DongHoPermissions.dongho_id == decoded_id,
-            )
-        ).first()
-
-        # Cannnot gant permissions to Admin
-        if existing_permission or existing_user.is_admin():
-            return (
-                jsonify(
-                    {
-                        "msg": "Người dùng đã được phân quyền cho đồng hồ này!",
-                    }
-                ),
-                409,
-            )  # Conflict status code
-
         return (
             jsonify(
                 {
@@ -1121,28 +949,7 @@ def check_user_info_and_dh_id_for_dongho_permissions(id, user_info):
 @dongho_bp.route("/user-info/<string:user_info>/group-id/<string:group_id>", methods=["GET"])
 @jwt_required()
 def check_user_info_and_group_id_permission_conflicts(group_id, user_info):
-    dongho_records = DongHo.query.filter_by(group_id=group_id).all()
-    if not dongho_records:
-        return jsonify({"error": "Group ID không tồn tại."}), 404
-    user = User.query.filter(
-        (User.username == user_info) | (User.email == user_info)
-    ).first()
-    if not user:
-        return jsonify({"error": "User không tồn tại."}), 404
-    conflicts = {}
 
-    for dongho in dongho_records:
-        if user.is_superadmin():
-            conflicts[dongho.to_dict()["id"]] = "Đồng hồ đã được phân quyền cho người dùng"
-            continue
-        dhp = DongHoPermissions.query.filter_by(
-            dongho_id=dongho.id, username=user.username
-        ).first()
-        if dhp:
-            dhp_dict = dhp.dongho.to_dict()
-            conflicts[dhp_dict["id"]] = "Đồng hồ đã được phân quyền cho người dùng"
-    if conflicts:
-        return jsonify(conflicts), 409
     return jsonify({"message": "Hợp lệ để phân quyền."}), 200
 
 # Thêm phân quyền
@@ -1150,55 +957,10 @@ def check_user_info_and_group_id_permission_conflicts(group_id, user_info):
 @jwt_required()
 def upsert_dongho_permission():
     try:
-        data = request.get_json()
-        id = data.get("id")
+        
+        #TODO:
+        return jsonify({"msg": "Quyền đã được tạo thành công!"}), 201
 
-        try:
-            decoded_id = decode(id)
-            dongho = DongHo.query.filter_by(id=decoded_id).first_or_404()
-        except Exception as e:
-            return jsonify({"msg": "Id không hợp lệ!"}), 404
-
-        user_info = data.get("user_info", "")
-        permission = int(data.get("permission", 0))
-
-        user = User.query.filter(
-            or_(User.username == user_info, User.email == user_info)
-        ).first()
-
-        if user:
-            role = Role.query.filter_by(permissions=permission).first()
-            if not role:
-                role = Role.query.filter_by(default=True).first()
-                if not role:
-                    return jsonify({"msg": "Không tìm thấy vai trò phù hợp!"}), 404
-
-            manager_username = data.get("manager", user.username)
-            manager = User.query.filter_by(username=manager_username).first()
-            if not manager:
-                manager = user
-            existing_dh_permission = DongHoPermissions.query.filter(
-                and_(
-                    DongHoPermissions.dongho_id == dongho.id,
-                    DongHoPermissions.username == user.username,
-                    DongHoPermissions.manager == manager.username,
-                )
-            ).first()
-            if existing_dh_permission:
-                existing_dh_permission.role_id = role.id
-                db.session.add(existing_dh_permission)
-            else:
-                new_dh_permission = DongHoPermissions(
-                    dongho_id=dongho.id,
-                    username=user.username,
-                    manager=manager.username,
-                    role_id=role.id,
-                )
-                db.session.add(new_dh_permission)
-            db.session.commit()
-            return jsonify({"msg": "Quyền đã được tạo thành công!"}), 201
-        else:
-            return jsonify({"msg": "Người dùng hoặc quản lý không tồn tại!"}), 404
     except Exception as e:
         print(e)
         db.session.rollback()
@@ -1208,59 +970,8 @@ def upsert_dongho_permission():
 @jwt_required()
 def insert_group_dongho_permission():
     try:
-        data = request.get_json()
-        permissions = data.get("permissions")
-        user_info = data.get("user_info")
-        
-        user = User.query.filter(
-            or_(User.username == user_info, User.email == user_info)
-        ).first()
-        
-        if not user:
-            return jsonify({"msg": "Người dùng không tồn tại!"}), 404
-        
-        current_user_identity = get_jwt_identity()
-        current_user = User.query.filter_by(username=current_user_identity["username"]).first()
-        
-        for perm in permissions:
-            id = perm.get("id")
-            permission_level = perm.get("permission")
-            
-            try:
-                decoded_id = decode(id)
-                dongho = DongHo.query.filter_by(id=decoded_id).first_or_404()
-            except Exception:
-                return jsonify({"msg": f"Id không hợp lệ cho {id}!"}), 404
-            
-            role = Role.query.filter_by(permissions=permission_level).first()
-            if not role:
-                role = Role.query.filter_by(default=True).first()
-                if not role:
-                    return jsonify({"msg": "Không tìm thấy vai trò phù hợp!"}), 404
-            
+        #TODO: 
 
-            manager = User.query.filter_by(username=current_user.username).first()
-            
-            existing_dh_permission = DongHoPermissions.query.filter(
-                and_(
-                    DongHoPermissions.dongho_id == dongho.id,
-                    DongHoPermissions.username == user.username,
-                )
-            ).first()
-            
-            if existing_dh_permission:
-                if current_user.is_superadmin():
-                    existing_dh_permission.role_id = role.id
-                    db.session.add(existing_dh_permission)
-            else:
-                new_dh_permission = DongHoPermissions(
-                    dongho_id=dongho.id,
-                    username=user.username,
-                    manager=(manager.username if manager else user.username),
-                    role_id=role.id,
-                )
-                db.session.add(new_dh_permission)
-        db.session.commit()
         return jsonify({"msg": "Quyền đã được tạo thành công!"}), 201
     
     except Exception as e:
@@ -1272,13 +983,7 @@ def insert_group_dongho_permission():
 @jwt_required()
 def delete_dongho_permission(id):
     try:
-        try:
-            decode_id = decode(id)
-        except Exception as e:
-            return jsonify({"msg": "Id không hợp lệ!"}), 404
-        per = DongHoPermissions.query.get_or_404(decode_id)
-        db.session.delete(per)
-        db.session.commit()
+        # TODO:
         return jsonify({"msg": "Xóa thành công!"}), 200
     except Exception as e:
         db.session.rollback()
@@ -1359,11 +1064,6 @@ def get_hieu_chuan_nhom_dongho():
             grouped_query.offset(limit * (page-1)).limit(limit).all()
         )
 
-        NDH_payment = {
-            payment.group_id: payment.is_paid
-            for payment in NhomDongHoPayment.query.all()
-        }
-
         result_list = [
             {
                 "group_id": row.group_id,
@@ -1372,7 +1072,7 @@ def get_hieu_chuan_nhom_dongho():
                 "co_so_su_dung": row.co_so_su_dung,
                 "nguoi_thuc_hien": row.nguoi_thuc_hien,
                 "ngay_thuc_hien": row.ngay_thuc_hien,
-                "is_paid": NDH_payment.get(row.group_id, False),
+                "is_paid": True,
             }
             for row in result
         ]
