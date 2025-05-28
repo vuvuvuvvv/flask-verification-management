@@ -1,6 +1,6 @@
 from flask import Blueprint, jsonify, request
 from flask_jwt_extended import jwt_required
-from app.models import PhongBan
+from app.models import PhongBan, User
 from app import db
 from app.utils.url_encrypt import decode, encode
 import math
@@ -8,10 +8,12 @@ import math
 phongban_bp = Blueprint("phongban", __name__)
 
 # Lấy danh sách tất cả phòng ban
-@phongban_bp.route("/", methods=["GET"])
+@phongban_bp.route("", methods=["GET"], strict_slashes=False)
+@phongban_bp.route("/", methods=["GET"], strict_slashes=False)
 @jwt_required()
 def get_all_phongban():
     try:
+        print("Lấy danh sách phòng ban")
         # Lấy các tham số query string
         ten_phong = request.args.get("ten_phong")
         truong_phong = request.args.get("truong_phong")
@@ -96,14 +98,20 @@ def get_all_phongban():
         if prev_from_id:
             phongbans = list(reversed(phongbans))
 
-        return jsonify({
-            "total_page":( math.ceil(total_count / limit) if limit else 1), 
-            "total_records": total_count, 
-            "data": [pb.to_dict() for pb in phongbans]
-        }), 200
+        return jsonify(
+            {
+                "status": 200,
+                "data": {
+                    "total_page":( math.ceil(total_count / limit) if limit else 1), 
+                    "total_records": total_count, 
+                    "data": [pb.to_dict() for pb in phongbans]
+                }
+            }
+        ), 200
 
-    except SQLAlchemyError as e:
-        return jsonify({"msg": "Lỗi truy vấn cơ sở dữ liệu", "error": str(e)}), 500
+    except Exception as e:
+        print(str(e))
+        return jsonify({"status": 500,"msg": "Lỗi truy vấn cơ sở dữ liệu", "error": str(e)}), 500
 
 # Lấy phòng ban theo ID
 @phongban_bp.route("/<int:phongban_id>", methods=["GET"])
@@ -112,11 +120,11 @@ def get_phongban_by_id(phongban_id):
     try:
         phongban = PhongBan.query.get(phongban_id)
         if phongban:
-            return jsonify(phongban.to_dict()), 200
+            return jsonify({"status": 200, "data":phongban.to_dict()}), 200
         else:
-            return jsonify({"error": "Phòng ban không tồn tại"}), 404
+            return jsonify({"status": 404, "error": "Phòng ban không tồn tại"}), 404
     except SQLAlchemyError as e:
-        return jsonify({"error": str(e)}), 500
+        return jsonify({"status": 500, "error": str(e)}), 500
 
 # Lấy danh sách phòng ban theo username của trưởng phòng
 @phongban_bp.route("/truongphong/<string:username>", methods=["GET"])
@@ -125,11 +133,11 @@ def get_phongban_by_truongphong(username):
     try:
         phongban = PhongBan.query.filter_by(truong_phong_username=username).first()
         if phongban:
-            return jsonify(phongban.to_dict()), 200
+            return jsonify({"status": 200, "data":phongban.to_dict()}), 200
         else:
-            return jsonify({"message": "Không tìm thấy phòng ban với trưởng phòng này"}), 404
+            return jsonify({"status": 404, "message": "Không tìm thấy phòng ban với trưởng phòng này"}), 404
     except Exception as e:
-        return jsonify({"error": str(e)}), 500
+        return jsonify({"status": 500, "error": str(e)}), 500
 
 
 # Lấy members cuar phòng ban theo ID
@@ -139,11 +147,11 @@ def get_members_by_phongban_id(phongban_id):
     try:
         phongban = PhongBan.query.get(phongban_id)
         if phongban:
-            return jsonify(u.to_dict() for u in phongban.members), 200
+            return jsonify({"status": 200, "data":[u.to_dict() for u in phongban.members]}), 200
         else:
-            return jsonify({"error": "Phòng ban không tồn tại"}), 404
+            return jsonify({"status": 404, "error": "Phòng ban không tồn tại"}), 404
     except SQLAlchemyError as e:
-        return jsonify({"error": str(e)}), 500
+        return jsonify({"status": 500, "error": str(e)}), 500
 
 # Lấy danh sách users gia nhập/chưa gia nhập phòng ban
 @phongban_bp.route('/users/by-phongban', methods=['GET'])
@@ -154,26 +162,30 @@ def get_users_by_phongban_status():
         users_with_phongban = User.query.filter(User.phong_ban_id.isnot(None)).all()
 
         result = {
-            "chua_gia_nhap": [
-                {
-                    "user": u.to_dict(),
-                    "is_manager": None,
-                    "phong_ban_id": None,
-                    "phong_ban": None
-                }
-                for u in users_no_phongban
-            ],
-            "da_gia_nhap": [
-                {
-                    "user": u.to_dict(),
-                    "is_manager": u.phong_ban.is_manager if u.phong_ban else None,
-                    "phong_ban_id": u.phong_ban_id,
-                    "phong_ban": u.phong_ban.ten_phong if u.phong_ban else None
-                }
-                for u in users_with_phongban
-            ]
+            "status": 200,
+            "data": {            
+                "chua_tham_gia": [
+                    {
+                        "user": u.to_dict(),
+                        "is_manager": None,
+                        "phong_ban_id": None,
+                        "phong_ban": None
+                    }
+                    for u in users_no_phongban
+                ],
+                "da_tham_gia": [
+                    {
+                        "user": u.to_dict(),
+                        "is_manager": u.phong_ban.is_manager if u.phong_ban else None,
+                        "phong_ban_id": u.phong_ban_id,
+                        "phong_ban": u.phong_ban.ten_phong if u.phong_ban else None
+                    }
+                    for u in users_with_phongban
+                ]
+            }
         }
 
         return jsonify(result), 200
     except Exception as e:
+        print(str(e))
         return jsonify({"error": str(e)}), 500
