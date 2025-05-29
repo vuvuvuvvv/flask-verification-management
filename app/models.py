@@ -487,7 +487,7 @@ class PhongBan(db.Model):
     def to_dict(self):
         return {
             "id": self.id,
-            "ten_phong": self.ten_phong,
+            "ten_phong_ban": self.ten_phong,
             "truong_phong_username": self.truong_phong_username,
             "truong_phong": self.truong_phong.to_dict() if self.truong_phong else None,
             "members": [user.to_dict() for user in self.members],
