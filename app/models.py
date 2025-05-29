@@ -27,7 +27,6 @@ class Role(db.Model):
         if self.permissions is None:
             self.permissions = Permission.USER
 
-
 class User(UserMixin, db.Model):
     __tablename__ = "user"
     id = db.Column(db.Integer, primary_key=True)
@@ -245,6 +244,9 @@ class DongHo(db.Model):
     # Define the relationship to the User model
     # user = db.relationship("User", foreign_keys=[owner_id], backref="user_dongho")
 
+    created_by = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False, index=True)
+    creator = db.relationship("User", backref="donghos_created")
+
     def __init__(
         self,
         ten_phuong_tien_do,
@@ -291,6 +293,7 @@ class DongHo(db.Model):
 
         noi_su_dung,
         ten_khach_hang,
+        created_by
         # vi_tri,
         # nhiet_do,
         # do_am,
@@ -338,6 +341,7 @@ class DongHo(db.Model):
 
         self.noi_su_dung = noi_su_dung
         self.ten_khach_hang = ten_khach_hang
+        self.created_by = created_by
 
         # self.vi_tri = vi_tri
         # self.nhiet_do = nhiet_do
@@ -397,7 +401,6 @@ class DongHo(db.Model):
             # "do_am": self.do_am,
             # "owner": None if not self.user else self.user.to_dict()
         }
-
 
 # class NhomDongHoPayment(db.Model):
 #     __tablename__ = "nhomdongho_payment"
@@ -483,6 +486,7 @@ class PhongBan(db.Model):
     def is_manager(self, user):
         if user.username == self.truong_phong_username:
             return True
+        return False
 
     def to_dict(self):
         return {
@@ -490,7 +494,10 @@ class PhongBan(db.Model):
             "ten_phong_ban": self.ten_phong,
             "truong_phong_username": self.truong_phong_username,
             "truong_phong": self.truong_phong.to_dict() if self.truong_phong else None,
-            "members": [user.to_dict() for user in self.members],
+            "members": [
+                user.to_dict() for user in self.members
+                if user.username != self.truong_phong_username
+            ],
             "ngay_tao": self.ngay_tao.isoformat() if self.ngay_tao else None,
         }
 

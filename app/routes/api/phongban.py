@@ -175,7 +175,7 @@ def get_users_by_phongban_status():
                 "da_tham_gia": [
                     {
                         "user": u.to_dict(),
-                        "is_manager": u.phong_ban.is_manager if u.phong_ban else None,
+                        "is_manager": u.phong_ban.is_manager(u),
                         "phong_ban_id": u.phong_ban_id,
                         "phong_ban": u.phong_ban.ten_phong if u.phong_ban else None
                     }
@@ -187,7 +187,7 @@ def get_users_by_phongban_status():
         return jsonify(result), 200
     except Exception as e:
         print(str(e))
-        return jsonify({"error": str(e)}), 500
+        return jsonify({"status": 500, "error": str(e)}), 500
 
 # upsert phòng ban
 @phongban_bp.route('', methods=['POST'])
@@ -222,7 +222,7 @@ def upsert_phong_ban():
                     db.session.add(user)
 
             elif is_manager is True:
-                old_phong_ban = PhongBan.query.filter_by(truong_phong_id=user.id).first()
+                old_phong_ban = PhongBan.query.filter_by(truong_phong_username=user.username).first()
                 if old_phong_ban:
                     # Gỡ các user thuộc phòng ban này
                     users_in_pb = User.query.filter_by(phong_ban_id=old_phong_ban.id).all()

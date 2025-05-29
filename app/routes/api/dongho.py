@@ -9,6 +9,7 @@ from app.models import (
     PDM,
     Role,
     User,
+    PhongBan
 )
 from app import db
 from werkzeug.exceptions import NotFound
@@ -18,13 +19,134 @@ from unidecode import unidecode
 
 dongho_bp = Blueprint("dongho", __name__)
 
+# @dongho_bp.route("/group", methods=["GET"])
+# @jwt_required()
+# def get_nhom_dongho():
+#     try:
+#         query = DongHo.query.filter(
+#             DongHo.group_id.isnot(None),
+#             DongHo.is_hieu_chuan == False
+#         )
+
+#         ten_phuong_tien_do = request.args.get("ten_phuong_tien_do")
+#         if ten_phuong_tien_do:
+#             query = query.filter(DongHo.ten_phuong_tien_do.ilike(f"%{ten_phuong_tien_do}%"))
+
+#         nguoi_thuc_hien = request.args.get("nguoi_thuc_hien")
+#         if nguoi_thuc_hien:
+#             query = query.filter(DongHo.nguoi_thuc_hien.ilike(f"%{nguoi_thuc_hien}%"))
+
+#         # Chuyển đổi ngày tháng từ chuỗi sang datetime
+#         ngay_kiem_dinh_from = request.args.get("ngay_kiem_dinh_from")
+#         if ngay_kiem_dinh_from:
+#             try:
+#                 # Loại bỏ phần không cần thiết
+#                 ngay_kiem_dinh_from = ngay_kiem_dinh_from.split(" (")[
+#                     0
+#                 ]  # Chỉ lấy phần trước "(Indochina Time)"
+#                 ngay_kiem_dinh_from = datetime.strptime(
+#                     ngay_kiem_dinh_from, "%a %b %d %Y %H:%M:%S GMT%z"
+#                 )
+#                 query = query.filter(DongHo.ngay_thuc_hien >= ngay_kiem_dinh_from)
+#             except ValueError as e:
+#                 return (
+#                     jsonify(
+#                         {
+#                             "msg": f"Invalid date format for 'ngay_kiem_dinh_from': {str(e)}"
+#                         }
+#                     ),
+#                     400,
+#                 )
+
+#         ngay_kiem_dinh_to = request.args.get("ngay_kiem_dinh_to")
+#         if ngay_kiem_dinh_to:
+#             try:
+#                 # Loại bỏ phần không cần thiết
+#                 ngay_kiem_dinh_to = ngay_kiem_dinh_to.split(" (")[
+#                     0
+#                 ]  # Chỉ lấy phần trước "(Indochina Time)"
+#                 ngay_kiem_dinh_to = datetime.strptime(
+#                     ngay_kiem_dinh_to, "%a %b %d %Y %H:%M:%S GMT%z"
+#                 )
+#                 query = query.filter(DongHo.ngay_thuc_hien <= ngay_kiem_dinh_to)
+#             except ValueError as e:
+#                 return (
+#                     jsonify(
+#                         {
+#                             "msg": f"Invalid date format for 'ngay_kiem_dinh_to': {str(e)}"
+#                         }
+#                     ),
+#                     400,
+#                 )
+        
+#         grouped_query = query.with_entities(
+#             DongHo.group_id,
+#             db.func.count(DongHo.id).label("so_luong"),
+#             db.func.max(DongHo.ten_phuong_tien_do).label("ten_phuong_tien_do"),
+#             db.func.max(DongHo.co_so_san_xuat).label("co_so_san_xuat"),
+#             db.func.max(DongHo.co_so_su_dung).label("co_so_su_dung"),
+#             db.func.max(DongHo.nguoi_thuc_hien).label("nguoi_thuc_hien"),
+#             db.func.max(DongHo.ngay_thuc_hien).label("ngay_thuc_hien"),
+#         ).group_by(DongHo.group_id)
+
+#         total_records = grouped_query.count()
+
+#         # Thực hiện nhóm và đếm trực tiếp trong truy vấn
+#         limit = int(request.args.get("limit", 10))
+#         page = int(request.args.get("page", 1))
+
+#         result = (
+#             grouped_query.offset(limit * (page-1)).limit(limit).all()
+#         )
+
+#         result_list = [
+#             {
+#                 "group_id": row.group_id,
+#                 "so_luong": row.so_luong,
+#                 "co_so_san_xuat": row.co_so_san_xuat,
+#                 "co_so_su_dung": row.co_so_su_dung,
+#                 "nguoi_thuc_hien": row.nguoi_thuc_hien,
+#                 "ngay_thuc_hien": row.ngay_thuc_hien,
+#                 "is_paid": True,
+#             }
+#             for row in result
+#         ]
+
+#         return jsonify({"total_page": math.ceil(total_records / limit),"total_records": total_records, "groups": result_list}), 200
+#     except Exception as e:
+#         print(e)
+#         return jsonify({"msg": f"Đã có lỗi xảy ra! Hãy thử lại sau."}), 500
+
 @dongho_bp.route("/group", methods=["GET"])
 @jwt_required()
 def get_nhom_dongho():
     try:
+        identity = get_jwt_identity()
+        current_username = None
+        if isinstance(identity, dict):
+            current_username = identity.get("username")  # lấy key đúng trong dict
+        else:
+            current_username = identity
+        current_user = User.query.filter_by(username=current_username).first()
+        if not current_user:
+            return jsonify({"msg": "User not found"}), 404
+
+        # Kiểm tra xem user có phải trưởng phòng không, lấy phòng ban nếu có
+        phong_ban = PhongBan.query.filter_by(truong_phong_username=current_user.username).first()
+
+        # Lấy danh sách user_id cần lấy đồng hồ
+        if phong_ban:
+            # Lấy tất cả thành viên phòng ban (bao gồm cả trưởng phòng)
+            user_ids = [user.id for user in phong_ban.members]
+            # Thêm trưởng phòng vì members không bao gồm trưởng phòng (theo định nghĩa quan hệ)
+            user_ids.append(current_user.id)
+        else:
+            user_ids = [current_user.id]
+
         query = DongHo.query.filter(
             DongHo.group_id.isnot(None),
-            DongHo.is_hieu_chuan == False
+            DongHo.is_hieu_chuan == False,
+            DongHo.created_by.in_(user_ids)
         )
 
         ten_phuong_tien_do = request.args.get("ten_phuong_tien_do")
@@ -35,49 +157,26 @@ def get_nhom_dongho():
         if nguoi_thuc_hien:
             query = query.filter(DongHo.nguoi_thuc_hien.ilike(f"%{nguoi_thuc_hien}%"))
 
-        # Chuyển đổi ngày tháng từ chuỗi sang datetime
+        # Xử lý ngày kiểm định from
         ngay_kiem_dinh_from = request.args.get("ngay_kiem_dinh_from")
         if ngay_kiem_dinh_from:
             try:
-                # Loại bỏ phần không cần thiết
-                ngay_kiem_dinh_from = ngay_kiem_dinh_from.split(" (")[
-                    0
-                ]  # Chỉ lấy phần trước "(Indochina Time)"
-                ngay_kiem_dinh_from = datetime.strptime(
-                    ngay_kiem_dinh_from, "%a %b %d %Y %H:%M:%S GMT%z"
-                )
+                ngay_kiem_dinh_from = ngay_kiem_dinh_from.split(" (")[0]
+                ngay_kiem_dinh_from = datetime.strptime(ngay_kiem_dinh_from, "%a %b %d %Y %H:%M:%S GMT%z")
                 query = query.filter(DongHo.ngay_thuc_hien >= ngay_kiem_dinh_from)
             except ValueError as e:
-                return (
-                    jsonify(
-                        {
-                            "msg": f"Invalid date format for 'ngay_kiem_dinh_from': {str(e)}"
-                        }
-                    ),
-                    400,
-                )
+                return jsonify({"msg": f"Invalid date format for 'ngay_kiem_dinh_from': {str(e)}"}), 400
 
+        # Xử lý ngày kiểm định to
         ngay_kiem_dinh_to = request.args.get("ngay_kiem_dinh_to")
         if ngay_kiem_dinh_to:
             try:
-                # Loại bỏ phần không cần thiết
-                ngay_kiem_dinh_to = ngay_kiem_dinh_to.split(" (")[
-                    0
-                ]  # Chỉ lấy phần trước "(Indochina Time)"
-                ngay_kiem_dinh_to = datetime.strptime(
-                    ngay_kiem_dinh_to, "%a %b %d %Y %H:%M:%S GMT%z"
-                )
+                ngay_kiem_dinh_to = ngay_kiem_dinh_to.split(" (")[0]
+                ngay_kiem_dinh_to = datetime.strptime(ngay_kiem_dinh_to, "%a %b %d %Y %H:%M:%S GMT%z")
                 query = query.filter(DongHo.ngay_thuc_hien <= ngay_kiem_dinh_to)
             except ValueError as e:
-                return (
-                    jsonify(
-                        {
-                            "msg": f"Invalid date format for 'ngay_kiem_dinh_to': {str(e)}"
-                        }
-                    ),
-                    400,
-                )
-        
+                return jsonify({"msg": f"Invalid date format for 'ngay_kiem_dinh_to': {str(e)}"}), 400
+
         grouped_query = query.with_entities(
             DongHo.group_id,
             db.func.count(DongHo.id).label("so_luong"),
@@ -90,13 +189,10 @@ def get_nhom_dongho():
 
         total_records = grouped_query.count()
 
-        # Thực hiện nhóm và đếm trực tiếp trong truy vấn
         limit = int(request.args.get("limit", 10))
         page = int(request.args.get("page", 1))
 
-        result = (
-            grouped_query.offset(limit * (page-1)).limit(limit).all()
-        )
+        result = grouped_query.offset(limit * (page - 1)).limit(limit).all()
 
         result_list = [
             {
@@ -111,10 +207,16 @@ def get_nhom_dongho():
             for row in result
         ]
 
-        return jsonify({"total_page": math.ceil(total_records / limit),"total_records": total_records, "groups": result_list}), 200
+        return jsonify({
+            "total_page": math.ceil(total_records / limit),
+            "total_records": total_records,
+            "groups": result_list
+        }), 200
+
     except Exception as e:
         print(e)
-        return jsonify({"msg": f"Đã có lỗi xảy ra! Hãy thử lại sau."}), 500
+        return jsonify({"msg": "Đã có lỗi xảy ra! Hãy thử lại sau."}), 500
+
 
 @dongho_bp.route("/permission/group/<string:username>", methods=["GET"])
 @jwt_required()
@@ -214,16 +316,31 @@ def get_nhom_dongho_with_permission(username):
 @jwt_required()
 def get_donghos():
     try:
-        query = DongHo.query.filter(
-            DongHo.is_hieu_chuan == False
-            )
+        identity = get_jwt_identity()
+        current_username = identity if isinstance(identity, str) else identity.get("username")
+        current_user = User.query.filter_by(username=current_username).first()
+        if not current_user:
+            return jsonify({"msg": "User không tồn tại"}), 404
 
-        # Apply filters based on request parameters
+        phong_ban = None
+        if current_user.phong_ban_id:
+            phong_ban = PhongBan.query.get(current_user.phong_ban_id)
+
+        # Nếu user là trưởng phòng của phòng ban thì lấy dongho của tất cả thành viên phòng đó
+        if phong_ban and phong_ban.is_manager(current_user):
+            user_ids = [u.id for u in phong_ban.members]
+        else:
+            user_ids = [current_user.id]
+
+        query = DongHo.query.filter(
+            DongHo.is_hieu_chuan == False,
+            DongHo.created_by.in_(user_ids)
+        )
+
+        # Các filter tìm kiếm
         so_giay_chung_nhan = request.args.get("so_giay_chung_nhan")
         if so_giay_chung_nhan:
-            query = query.filter(
-                DongHo.so_giay_chung_nhan.ilike(f"%{so_giay_chung_nhan}%")
-            )
+            query = query.filter(DongHo.so_giay_chung_nhan.ilike(f"%{so_giay_chung_nhan}%"))
 
         serial = request.args.get("serial")
         if serial:
@@ -233,108 +350,44 @@ def get_donghos():
         if nguoi_thuc_hien:
             query = query.filter(DongHo.nguoi_thuc_hien.ilike(f"%{nguoi_thuc_hien}%"))
 
-        # Date range filters
+        # Lọc theo ngày thực hiện (ngày_kiem_dinh_from, ngày_kiem_dinh_to)
         ngay_kiem_dinh_from = request.args.get("ngay_kiem_dinh_from")
         if ngay_kiem_dinh_from:
             try:
                 ngay_kiem_dinh_from = ngay_kiem_dinh_from.split(" (")[0]
-                ngay_kiem_dinh_from = datetime.strptime(
-                    ngay_kiem_dinh_from, "%a %b %d %Y %H:%M:%S GMT%z"
-                )
+                ngay_kiem_dinh_from = datetime.strptime(ngay_kiem_dinh_from, "%a %b %d %Y %H:%M:%S GMT%z")
                 query = query.filter(DongHo.ngay_thuc_hien >= ngay_kiem_dinh_from)
             except ValueError as e:
-                return (
-                    jsonify(
-                        {
-                            "msg": f"Invalid date format for 'ngay_kiem_dinh_from': {str(e)}"
-                        }
-                    ),
-                    400,
-                )
+                return jsonify({"msg": f"Invalid date format for 'ngay_kiem_dinh_from': {str(e)}"}), 400
 
         ngay_kiem_dinh_to = request.args.get("ngay_kiem_dinh_to")
         if ngay_kiem_dinh_to:
             try:
                 ngay_kiem_dinh_to = ngay_kiem_dinh_to.split(" (")[0]
-                ngay_kiem_dinh_to = datetime.strptime(
-                    ngay_kiem_dinh_to, "%a %b %d %Y %H:%M:%S GMT%z"
-                )
+                ngay_kiem_dinh_to = datetime.strptime(ngay_kiem_dinh_to, "%a %b %d %Y %H:%M:%S GMT%z")
                 query = query.filter(DongHo.ngay_thuc_hien <= ngay_kiem_dinh_to)
             except ValueError as e:
-                return (
-                    jsonify(
-                        {
-                            "msg": f"Invalid date format for 'ngay_kiem_dinh_to': {str(e)}"
-                        }
-                    ),
-                    400,
-                )
+                return jsonify({"msg": f"Invalid date format for 'ngay_kiem_dinh_to': {str(e)}"}), 400
 
-        # Get total count of records matching the filters
-        total_count = query.count()
-
-        # Keyset pagination
-        limit = int(request.args.get("limit", 10))  
-        last_seen_encoded = request.args.get("last_seen", "")
-        last_seen = 0
-        if last_seen_encoded:
-            try:
-                last_seen = int(decode(last_seen_encoded))
-            except Exception as e:
-                print(f"Decoding error: {e}")
-        next_from_encoded = request.args.get("next_from", "")
-        next_from_id = 0
-        if next_from_encoded:
-            try:
-                next_from_id = int(decode(next_from_encoded))
-            except Exception as e:
-                print(f"Decoding error: {e}")
-                
-        prev_from_encoded = request.args.get("prev_from", "")
-        prev_from_id = 0
-        if prev_from_encoded:
-            try:
-                prev_from_id = int(decode(prev_from_encoded))
-            except Exception as e:
-                print(f"Decoding error: {e}")
-        
-        if last_seen:
-            query = query.filter(DongHo.id >= last_seen).order_by(DongHo.id.asc()).limit(limit)
-        else:
-            if prev_from_id != 0 and next_from_id != 0:
-                query = query.filter(DongHo.id > 0).order_by(DongHo.id.asc()).limit(limit)
-            elif prev_from_id != 0:
-                query = query.filter(DongHo.id < prev_from_id).order_by(DongHo.id.desc()).limit(limit)
-            else:
-                query = query.filter(DongHo.id > next_from_id).order_by(DongHo.id.asc()).limit(limit)
-
-        donghos = query.all()
-
-        if prev_from_id:
-            donghos = list(reversed(donghos))
+        donghos = query.order_by(DongHo.id.asc()).all()
 
         result = []
         for dongho in donghos:
-            if dongho:
-                dongho_dict = None if not dongho else dongho.to_dict()
-                if "du_lieu_kiem_dinh" in dongho_dict:
-                    try:
-                        dongho_dict["du_lieu_kiem_dinh"] = json.loads(
-                            dongho_dict["du_lieu_kiem_dinh"]
-                        )
-                    except json.JSONDecodeError as e:
-                        return (
-                            jsonify({"msg": f"Đã có lỗi xảy ra! Hãy thử lại sau."}),
-                            500,
-                        )
+            dongho_dict = dongho.to_dict()
+            if "du_lieu_kiem_dinh" in dongho_dict and dongho_dict["du_lieu_kiem_dinh"]:
+                try:
+                    dongho_dict["du_lieu_kiem_dinh"] = json.loads(dongho_dict["du_lieu_kiem_dinh"])
+                except json.JSONDecodeError:
+                    return jsonify({"msg": "Đã có lỗi xảy ra! Hãy thử lại sau."}), 500
+            result.append(dongho_dict)
 
-                result.append(dongho_dict)
+        return jsonify({"total_records": len(result), "donghos": result}), 200
 
-        return jsonify({"total_page": math.ceil(total_count / limit),"total_records": total_count, "donghos": result}), 200
     except Exception as e:
         print(e)
-        return jsonify({"msg": f"Đã có lỗi xảy ra! Hãy thử lại sau."}), 500
-    
+        return jsonify({"msg": "Đã có lỗi xảy ra! Hãy thử lại sau."}), 500
+
+
 # Lấy ra toàn bộ dongHo hợp lệ với vai trò người dùng (<= Admin)
 # SuperAdmin thì lấy ra toàn bộ: @dongho_bp.route("", methods=["GET"])
 @dongho_bp.route("/permission/<string:username>", methods=["GET"])
@@ -479,6 +532,7 @@ def _get_last_day_of_month_in_future(years: int, date: datetime) -> datetime:
 def create_dongho():
     try:
         data = request.get_json()
+        current_user_identity = get_jwt_identity()
         data.pop("id", None)
         hieu_luc_bien_ban = None
         if data.get("so_giay_chung_nhan") and data.get("so_tem"):
@@ -532,7 +586,11 @@ def create_dongho():
         #         400,
         #     )
         
-        current_user_identity = get_jwt_identity()
+        current_user_identity = get_jwt_identity()        
+        try:
+            decoded_id = decode(current_user_identity["id"])
+        except Exception as e:
+            return jsonify({"msg": "Invalid ID format!"}), 404
         history_entry = {
             "content": "Tạo mới đồng hồ.",
             "updated_by": f"{current_user_identity['fullname']} - {current_user_identity['email']} - {current_user_identity['role']}",
@@ -585,7 +643,8 @@ def create_dongho():
             nguoi_soat_lai=data.get("nguoi_soat_lai"),
 
             hieu_luc_bien_ban=hieu_luc_bien_ban,
-            last_updated = json.dumps(history_entry)
+            last_updated = json.dumps(history_entry),
+            created_by=decoded_id,
         )
 
         db.session.add(new_dongho)
