@@ -499,6 +499,12 @@ class PhongBan(db.Model):
                 if user.username != self.truong_phong_username
             ],
             "ngay_tao": self.ngay_tao.isoformat() if self.ngay_tao else None,
+            "dong_hos": [
+                dong_ho.to_dict()
+                for user in self.members
+                if user.username != self.truong_phong_username
+                for dong_ho in user.donghos_created
+            ],
         }
 
 # class OTP(db.Model):
