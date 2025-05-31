@@ -189,6 +189,42 @@ def get_users_by_phongban_status():
         print(str(e))
         return jsonify({"status": 500, "error": str(e)}), 500
 
+# Lấy danh sách users gia nhập/chưa gia nhập phòng ban
+@phongban_bp.route('/users/by-phongban/except/<int:phongban_id>', methods=['GET'])
+@jwt_required()
+def get_users_by_phongban_status_except_phong_ban_id(phongban_id):
+    try:
+        users_no_phongban = User.query.filter(User.phong_ban_id.is_(None)).all()
+        users_with_phongban = User.query.filter(User.phong_ban_id.isnot(None)).all()
+
+        result = {
+            "data": {            
+                "chua_tham_gia": [
+                    {
+                        "user": u.to_dict(),
+                        "is_manager": None,
+                        "phong_ban_id": None,
+                        "phong_ban": None
+                    }
+                    for u in users_no_phongban
+                ],
+                "da_tham_gia": [
+                    {
+                        "user": u.to_dict(),
+                        "is_manager": u.phong_ban.is_manager(u),
+                        "phong_ban_id": u.phong_ban_id,
+                        "phong_ban": u.phong_ban.ten_phong if u.phong_ban else None
+                    }
+                    for u in users_with_phongban
+                ]
+            }
+        }
+
+        return jsonify(result), 200
+    except Exception as e:
+        print(str(e))
+        return jsonify({"status": 500, "error": str(e)}), 500
+
 # upsert phòng ban
 @phongban_bp.route('', methods=['POST'])
 @jwt_required()
