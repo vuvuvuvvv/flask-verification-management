@@ -1,5 +1,5 @@
 from flask import Blueprint, jsonify, request
-from flask_jwt_extended import jwt_required
+from flask_jwt_extended import (jwt_required, get_jwt_identity)
 from app.models import PhongBan, User
 from app import db
 from app.utils.url_encrypt import decode, encode
@@ -195,7 +195,10 @@ def get_users_by_phongban_status():
 def get_users_by_phongban_status_except_phong_ban_id(phongban_id):
     try:
         users_no_phongban = User.query.filter(User.phong_ban_id.is_(None)).all()
-        users_with_phongban = User.query.filter(User.phong_ban_id.isnot(None)).all()
+        users_with_phongban = User.query.filter(
+            User.phong_ban_id.isnot(None),
+            User.phong_ban_id != phongban_id
+            ).all()
 
         result = {
             "data": {            
@@ -298,3 +301,141 @@ def upsert_phong_ban():
         print(e)
         db.session.rollback()
         return jsonify({"status":500, "msg": "Đã có lỗi xảy ra! Hãy thử lại sau."}), 500
+
+@phongban_bp.route('/<string:id>', methods=['DELETE'])
+@jwt_required()
+def delete_phong_ban(id):
+    try:
+        if not id:
+            return jsonify({"status": 400, "msg": "ID phòng ban không hợp lệ."}), 400
+
+        phong_ban = db.session.get(PhongBan, id)
+
+        if not phong_ban:
+            return jsonify({"status": 404, "msg": "Phòng ban không tồn tại."}), 404
+
+        current_user_identity = get_jwt_identity()        
+        try:
+            decoded_id = decode(current_user_identity["id"])
+        except Exception as e:
+            return jsonify({"msg": "Invalid ID format!"}), 404
+        current_user = db.session.get(User, decoded_id)
+
+        if not current_user or not current_user.is_admin():
+            return jsonify({
+                "status": 403,
+                "msg": "Bạn không có quyền giải tán phòng ban này."
+            }), 403
+
+        # Gỡ liên kết các nhân viên
+        users_in_pb = User.query.filter_by(phong_ban_id=id).all()
+        for user in users_in_pb:
+            user.phong_ban_id = None
+            db.session.add(user)
+
+        db.session.delete(phong_ban)
+        db.session.commit()
+
+        return jsonify({
+            "status": 200,
+            "msg": "Đã giải tán phòng ban thành công."
+        }), 200
+
+    except Exception as e:
+        print(e)
+        db.session.rollback()
+        return jsonify({
+            "status": 500,
+            "msg": "Đã xảy ra lỗi. Vui lòng thử lại sau."
+        }), 500
+
+
+@phongban_bp.route('/nhan-vien', methods=['POST'])
+@jwt_required()
+def add_nhan_vien():
+    try:
+        data = request.get_json()
+        phong_ban_id = data.get("id")
+        members_data = data.get("members", [])
+
+        if not phong_ban_id:
+            return jsonify({"status": 400, "msg": "Thiếu ID phòng ban."}), 400
+
+        phong_ban = db.session.get(PhongBan, phong_ban_id)
+        if not phong_ban:
+            return jsonify({"status": 404, "msg": "Phòng ban không tồn tại."}), 404
+
+        if not members_data:
+            return jsonify({"status": 400, "msg": "Danh sách nhân viên trống."}), 400
+
+        for member in members_data:
+            is_manager = member.get("is_manager")
+            user_data = member.get("user")
+            user_id = decode(user_data.get("id"))
+
+            if user_id is None:
+                continue
+
+            user = db.session.get(User, user_id)
+            if not user:
+                continue
+
+            # Chỉ add nếu user chưa có phòng ban hoặc thuộc phòng ban khác
+            if user.phong_ban_id is None or user.phong_ban_id != phong_ban_id:
+                if is_manager is True:
+                    # Kiểm tra nếu user là trưởng phòng của phòng ban khác
+                    old_phong_ban = PhongBan.query.filter_by(truong_phong_username=user.username).first()
+                    if old_phong_ban:
+                        # Gỡ các user thuộc phòng ban đó
+                        users_in_old_pb = User.query.filter_by(phong_ban_id=old_phong_ban.id).all()
+                        for u in users_in_old_pb:
+                            u.phong_ban_id = None
+                            db.session.add(u)
+                        db.session.delete(old_phong_ban)
+
+                user.phong_ban_id = phong_ban_id
+                db.session.add(user)
+
+        db.session.commit()
+        return jsonify({"status": 201, "msg": "Thêm nhân viên thành công."}), 201
+
+    except Exception as e:
+        print(e)
+        db.session.rollback()
+        return jsonify({"status": 500, "msg": "Đã có lỗi xảy ra! Hãy thử lại sau."}), 500
+
+@phongban_bp.route("/nhan-vien/<string:id>", methods=["DELETE"])
+@jwt_required()
+def remove_nhan_vien_from_phong_ban(id):
+    try:
+        decoded_id = decode(id)
+    except Exception as e:
+        traceback.print_exc()
+        return jsonify({"status": 404, "msg": "Invalid ID format!"}), 404
+        
+    user = User.query.get(decoded_id)
+
+    if not user:
+        return jsonify({"status": 404, "msg": "Nhân viên không tồn tại."}), 404
+
+    phong_ban = PhongBan.query.filter_by(id=user.phong_ban_id).first()
+    if phong_ban and phong_ban.truong_phong_username == user.username:
+        return jsonify({
+            "status": 400, 
+            "msg": "Không thể xóa trưởng phòng. Hãy chuyển quyền quản lý trước."
+        }), 400
+
+    try:
+        user.phong_ban_id = None
+        db.session.commit()
+        return jsonify({
+            "status": 200,
+            "msg": "Đã gỡ nhân viên khỏi phòng ban thành công."
+        }), 200
+    except Exception as e:
+        traceback.print_exc()
+        db.session.rollback()
+        return jsonify({
+            "status": 500,
+            "msg": f"Xảy ra lỗi khi cập nhật: {str(e)}"
+        }), 500

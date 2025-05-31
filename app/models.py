@@ -402,69 +402,6 @@ class DongHo(db.Model):
             # "owner": None if not self.user else self.user.to_dict()
         }
 
-# class NhomDongHoPayment(db.Model):
-#     __tablename__ = "nhomdongho_payment"
-#     id = db.Column(db.Integer, primary_key=True)
-#     group_id = db.Column(db.String(50), nullable=False)
-#     is_paid = db.Column(db.Boolean, default=False, nullable=False)
-#     paid_date = db.Column(db.DateTime, nullable=True)
-#     payment_collector = db.Column(db.String(50), nullable=True)
-#     last_updated = db.Column(db.Text, nullable=True)
-
-#     def __init__(
-#         self,
-#         group_id,
-#         is_paid=False,
-#         paid_date=None,
-#         payment_collector=None,
-#         last_updated=None,
-#     ):
-#         self.group_id = group_id
-#         self.is_paid = is_paid
-#         self.paid_date = paid_date
-#         self.payment_collector = payment_collector
-#         self.last_updated = last_updated
-
-#     def to_dict(self):
-#         return {
-#             "id": encode(self.id),
-#             "group_id": self.group_id,
-#             "is_paid": self.is_paid,
-#             "paid_date": self.paid_date,
-#             "payment_collector": self.payment_collector,
-#             "last_updated": self.last_updated,
-#         }
-
-
-# class DongHoPermissions(db.Model):
-#     __tablename__ = "dongho_permissions"
-#     id = db.Column(db.Integer, primary_key=True)
-#     dongho_id = db.Column(db.Integer, db.ForeignKey("dongho.id"), index=True)
-#     username = db.Column(db.String(64), db.ForeignKey("user.username"), index=True)
-#     role_id = db.Column(db.Integer, db.ForeignKey("roles.id"))
-#     manager = db.Column(db.String(64), db.ForeignKey("user.username"), index=True)
-
-#     dongho = db.relationship("DongHo", foreign_keys=[dongho_id], backref="dongho_permissions")
-#     user = db.relationship("User", foreign_keys=[username], backref="user_permissions")
-#     mng = db.relationship("User", foreign_keys=[manager], backref="manager_permissions")
-#     role = db.relationship("Role", foreign_keys=[role_id], backref="role_permissions")
-
-#     def __init__(self, dongho_id, username,manager, role_id):
-#         self.dongho_id = dongho_id
-#         self.username = username
-#         self.manager = manager
-#         self.role_id = role_id
-
-#     def to_dict(self):
-#         return {
-#             "id": encode(self.id),
-#             "dongho":  None if not self.dongho else self.dongho.to_dict(),
-#             "user":  None if not self.user else self.user.to_dict(),
-#             "manager":  None if not self.mng else self.mng.to_dict(),
-#             "role":  None if not self.role else self.role.name,
-#         }
-
-
 class PhongBan(db.Model):
     __tablename__ = "phongban"
 
