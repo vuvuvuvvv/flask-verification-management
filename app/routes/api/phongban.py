@@ -228,7 +228,7 @@ def get_users_by_phongban_status_except_phong_ban_id(phongban_id):
         print(str(e))
         return jsonify({"status": 500, "error": str(e)}), 500
 
-# upsert phòng ban
+
 @phongban_bp.route('', methods=['POST'])
 @jwt_required()
 def upsert_phong_ban():
@@ -237,70 +237,111 @@ def upsert_phong_ban():
         ten_phong_ban = data.get("ten_phong_ban")
         truong_phong_data = data.get("truong_phong")
         members_data = data.get("members", [])
+        print(members_data)
+        phong_ban_id = data.get("id_phong_ban")
 
-        all_members = [truong_phong_data] + members_data
-
-        for member in all_members:
+        def process_member(member, phong_ban_id=None, set_manager=False):
             is_manager = member.get("is_manager")
             user_data = member.get("user")
+            if not user_data:
+                return None
             user_id = decode(user_data.get("id"))
-
             if user_id is None:
-                continue
-
+                return None
             user = db.session.get(User, user_id)
             if not user:
-                continue
-
-            if is_manager is None:
-                continue
-
-            if is_manager is False:
-                if user.phong_ban_id:
-                    user.phong_ban_id = None
-                    db.session.add(user)
-
-            elif is_manager is True:
-                old_phong_ban = PhongBan.query.filter_by(truong_phong_username=user.username).first()
-                if old_phong_ban:
-                    # Gỡ các user thuộc phòng ban này
-                    users_in_pb = User.query.filter_by(phong_ban_id=old_phong_ban.id).all()
-                    for u in users_in_pb:
-                        u.phong_ban_id = None
-                        db.session.add(u)
-                    db.session.delete(old_phong_ban)
-
-        # Sau khi xử lý xóa xong, tạo mới phòng ban
-        truong_phong_user_id = decode(truong_phong_data["user"]["id"])
-        truong_phong_user = db.session.get(User, truong_phong_user_id)
-
-        if not truong_phong_user:
-            raise ValueError("Trưởng phòng không hợp lệ.")
-
-        new_pb = PhongBan(ten_phong=ten_phong_ban, truong_phong_username=truong_phong_user.username)
-
-        db.session.add(new_pb)
-        db.session.flush()  # Lấy ID mới của phòng ban
-
-        # Gán lại phòng ban cho trưởng phòng và các thành viên
-        truong_phong_user.phong_ban_id = new_pb.id
-        db.session.add(truong_phong_user)
-
-        for member in members_data:
-            user_data = member.get("user")
-            user_id = decode(user_data.get("id"))
-            user = db.session.get(User, user_id)
-            if user:
-                user.phong_ban_id = new_pb.id
+                return None
+            if is_manager is not None:
+                if is_manager is True and set_manager:
+                    return user  # sẽ set tên vào phòng ban sau
+                user.phong_ban_id = phong_ban_id
                 db.session.add(user)
+            return None
 
-        db.session.commit()        
-        return jsonify({"status":201, "msg": "Tạo phòng ban thành công"}), 201
+        # ========== CẬP NHẬT ==========
+        if phong_ban_id:
+            phong_ban = db.session.get(PhongBan, phong_ban_id)
+            if not phong_ban:
+                return jsonify({"status": 404, "msg": "Phòng ban không tồn tại"}), 404
+
+            phong_ban.ten_phong = ten_phong_ban
+
+            # Gỡ nhân viên cũ ra khỏi phòng ban
+            users_in_pb = User.query.filter_by(phong_ban_id=phong_ban_id).all()
+            for u in users_in_pb:
+                u.phong_ban_id = None
+                db.session.add(u)
+
+            # Xử lý trưởng phòng và các thành viên mới
+            all_members = [truong_phong_data] + members_data
+            truong_phong_user = None
+
+            for member in all_members:
+                user = process_member(member, phong_ban_id=phong_ban_id, set_manager=True)
+                if user:
+                    truong_phong_user = user
+
+            if truong_phong_user:
+                phong_ban.truong_phong_username = truong_phong_user.username
+
+            db.session.add(phong_ban)
+            db.session.commit()
+            return jsonify({"status": 200, "msg": "Cập nhật phòng ban thành công"}), 200
+
+        # ========== TẠO MỚI ==========
+        else:
+            all_members = [truong_phong_data] + members_data
+
+            for member in all_members:
+                is_manager = member.get("is_manager")
+                user_data = member.get("user")
+                if not user_data:
+                    continue
+                user_id = decode(user_data.get("id"))
+                if user_id is None:
+                    continue
+
+                user = db.session.get(User, user_id)
+                if not user:
+                    continue
+
+                if is_manager is True:
+                    old_phong_ban = PhongBan.query.filter_by(truong_phong_username=user.username).first()
+                    if old_phong_ban:
+                        users_in_pb = User.query.filter_by(phong_ban_id=old_phong_ban.id).all()
+                        for u in users_in_pb:
+                            u.phong_ban_id = None
+                            db.session.add(u)
+                        db.session.delete(old_phong_ban)
+                elif is_manager is False:
+                    if user.phong_ban_id:
+                        user.phong_ban_id = None
+                        db.session.add(user)
+
+            truong_phong_user_id = decode(truong_phong_data["user"]["id"])
+            truong_phong_user = db.session.get(User, truong_phong_user_id)
+
+            if not truong_phong_user:
+                raise ValueError("Trưởng phòng không hợp lệ.")
+
+            new_pb = PhongBan(ten_phong=ten_phong_ban, truong_phong_username=truong_phong_user.username)
+            db.session.add(new_pb)
+            db.session.flush()
+
+            truong_phong_user.phong_ban_id = new_pb.id
+            db.session.add(truong_phong_user)
+
+            for member in members_data:
+                process_member(member, phong_ban_id=new_pb.id)
+
+            db.session.commit()
+            return jsonify({"status": 201, "msg": "Tạo phòng ban thành công"}), 201
 
     except Exception as e:
         print(e)
         db.session.rollback()
-        return jsonify({"status":500, "msg": "Đã có lỗi xảy ra! Hãy thử lại sau."}), 500
+        return jsonify({"status": 500, "msg": "Đã có lỗi xảy ra! Hãy thử lại sau."}), 500
+
 
 @phongban_bp.route('/<string:id>', methods=['DELETE'])
 @jwt_required()
