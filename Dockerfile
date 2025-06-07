@@ -1,43 +1,53 @@
 # Stage 1: Build
 FROM python:3.10-slim AS base
 
-# Set the working directory in the container
+# Set working directory
 WORKDIR /app
+
+# Cài các gói cần thiết và SSH server
 RUN apt update && apt install -y \
-  gcc \       
+  gcc \
   libpq-dev \
   python3-dev \
   postgresql-client \
-  build-essential
+  build-essential \
+  openssh-server && \
+  mkdir /var/run/sshd
 
-# Copy only necessary files first (ignore migrations/)
+# Thiết lập mật khẩu root (không nên dùng trong production)
+RUN echo "root:root" | chpasswd
+
+# Cho phép đăng nhập SSH bằng mật khẩu
+RUN sed -i 's/^#PermitRootLogin.*/PermitRootLogin yes/' /etc/ssh/sshd_config && \
+    sed -i 's/^#PasswordAuthentication.*/PasswordAuthentication yes/' /etc/ssh/sshd_config
+
+# Copy requirements và cài dependencies
 COPY requirements.txt requirements.txt
-
-# Upgrade pip and install the Python dependencies
 RUN pip install --upgrade pip
 RUN pip install -r requirements.txt
 
-# Copy the rest of the application's code, but exclude migrations/
+# Copy toàn bộ source code
 COPY . /app
-RUN rm -rf /app/migrations  # Chắc chắn xóa migrations/
 
-# Stage 2: Run
+# Xoá migrations nếu có
+RUN rm -rf /app/migrations
+
+
+# Stage 2: Runtime
 FROM base
 
-# Set the working directory in the container
 WORKDIR /app
 
-# Set the FLASK_APP environment variable
+# Biến môi trường Flask
 ENV FLASK_APP=manage:app
-# Set to use print()
-ENV PYTHONUNBUFFERED=1        
+ENV PYTHONUNBUFFERED=1
 
-# Expose the port
-EXPOSE 5000
+# Expose cả Flask và SSH
+EXPOSE 5000 22
 
-
-# CMD script
+# CMD: chạy SSH server trước, rồi tiếp tục chờ Postgres và chạy Flask
 CMD ["sh", "-c", " \
+  service ssh start && \
   timeout=30; \
   while ! pg_isready -h postgres; do \
     >&2 echo 'Postgres is unavailable - sleeping'; \
@@ -50,8 +60,7 @@ CMD ["sh", "-c", " \
   done; \
   >&2 echo 'Postgres is up - executing command'; \
   if [ ! -d 'migrations/versions' ]; then \
-    flask db init && flask db migrate -m 'Initial migration'; \
+    flask db init && flask db migrate -m \"Initial migration\"; \
   fi; \
-  >&2 echo 'Postgres is up - executing command'; \
   flask db upgrade && python init_db/seed.py && flask run --host=0.0.0.0 \
 "]
