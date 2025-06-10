@@ -160,15 +160,11 @@ def logout():
 
 
 @auth_bp.route("/me", methods=["GET"])
-# @jwt_required()
-@login_required
+@jwt_required()
 def profile():
-    # get user from jwt
-    username = None
-
     try:
-        username = current_user.username
-        user = User.query.filter_by(username=username).first()
+        identity = get_jwt_identity()
+        user = User.query.filter_by(username=identity["username"]).first()
         if not user:
             return jsonify({"msg": "Không tìm thấy người dùng!"}), 404
         return jsonify(user.to_dict()), 200
