@@ -1,4 +1,4 @@
-from flask import Blueprint, jsonify, send_file
+from flask import Blueprint, jsonify, send_file, request
 from flask_jwt_extended import jwt_required
 from app.models import DongHo
 from app import db
@@ -10,6 +10,8 @@ import openpyxl
 from openpyxl.drawing.image import Image
 from openpyxl.styles import Border, Side, Alignment, Font
 from app.constants import PP_THUC_HIEN
+from datetime import datetime
+import traceback
 
 from io import BytesIO
 import shutil
@@ -47,7 +49,7 @@ def _get_sai_so_dong_ho(form_value: DuLieuMotLanChay) -> float:
 
     return None
 
-def _create_sample_bb_excel_buffer_file(dongho: DongHo):
+def _create_sample_bb_excel_buffer_file(dongho: DongHo, is_preview: bool = False):
     row_heights = 0.69 #cm
     try:
         dongho_dict = dongho.to_dict()
@@ -81,7 +83,8 @@ def _create_sample_bb_excel_buffer_file(dongho: DongHo):
             os.makedirs(bb_directory)
 
         if not os.path.exists(bb_file_path):
-            src_file = "files/BB_ExcelForm.xlsm"
+            suffix = "Preview" if is_preview else "ExcelForm"
+            src_file = f"files/BB_{suffix}.xlsm"
             workbook = openpyxl.load_workbook(src_file)
             sheet = workbook.active
 
@@ -102,7 +105,7 @@ def _create_sample_bb_excel_buffer_file(dongho: DongHo):
 
             if dongho.so_giay_chung_nhan:
                 sheet.cell(
-                    row=3, column=20, value=f"FMS.KĐ.{dongho.so_giay_chung_nhan}.{dongho.ngay_thuc_hien.strftime('%y')}"
+                    row=3, column=20, value=f"FMS.KĐ.{dongho.so_giay_chung_nhan}.{dongho.ngay_thuc_hien.strftime('%y') if dongho.ngay_thuc_hien else '?'}"
                 )
 
             sheet.cell(
@@ -431,8 +434,8 @@ def _create_sample_bb_excel_buffer_file(dongho: DongHo):
             return excel_buffer, fileName
     except Exception as e:
         print("Error creating sample BB Excel file: ", str(e))
-        return None, None
-        
+        traceback.print_exc()
+        return None, None      
 
 @download_bp.route("/kiemdinh/bienban/<string:id>", methods=["GET"])
 def get_excel_bb_kiem_dinh(id):
@@ -457,11 +460,8 @@ def get_excel_bb_kiem_dinh(id):
     except Exception as e:
         return jsonify({"msg": f"Đã có lỗi xảy ra: {str(e)}"}), 500
 
-
-
 @download_bp.route("/kiemdinh/bienban/pdf/<string:id>", methods=["GET"])
 def get_pdf_bb_kiem_dinh(id):
-
     try:
         decoded_id = decode(id)
         dongho = DongHo.query.filter_by(id=decoded_id).first_or_404()
@@ -489,11 +489,99 @@ def get_pdf_bb_kiem_dinh(id):
         print("BB: " + str(e))
         return jsonify({"msg": f"Đã có lỗi xảy ra: {str(e)}"}), 500
 
-@download_bp.route("/kiemdinh/gcn/<string:id>", methods=["GET"])
-def get_gcn_kiem_dinh(id):
+def _parse_date(date_str):
     try:
-        decoded_id = decode(id)
-        dongho = DongHo.query.filter_by(id=decoded_id).first_or_404()
+        return datetime.strptime(date_str, "%Y-%m-%d").date() if date_str else None
+    except:
+        return None
+
+@download_bp.route("/kiemdinh/bienban/preview/pdf", methods=["POST"])
+def preview_pdf_bb_kiem_dinh():
+    try:
+        data = request.get_json()
+
+        if not data:
+            return jsonify({"msg": "Thiếu thông tin đồng hồ!"}), 400
+
+        # OPTIONAL: Nếu cần decode id:
+        # decoded_id = decode(dongho_data["id"])
+
+        # Tùy vào cấu trúc `dongho_data`, có thể tạo instance tạm:
+        dongho = DongHo(
+            data.get("ten_phuong_tien_do"),
+            data.get("is_hieu_chuan"),
+            data.get("index"),
+            data.get("group_id"),
+
+            data.get("sensor"),
+            data.get("transitor"),
+            data.get("serial"),
+
+            data.get("co_so_san_xuat"),
+            _parse_date(data.get("nam_san_xuat")),
+
+            data.get("dn"),
+            data.get("d"),
+            data.get("ccx"),
+            data.get("q3"),
+            data.get("r"),
+            data.get("qn"),
+            data.get("k_factor"),
+            data.get("so_qd_pdm"),
+
+            data.get("so_tem"),
+            data.get("so_giay_chung_nhan"),
+
+            data.get("co_so_su_dung"),
+            data.get("phuong_phap_thuc_hien"),
+            data.get("chuan_thiet_bi_su_dung"),
+            data.get("nguoi_thuc_hien"),
+            _parse_date(data.get("ngay_thuc_hien")),
+
+            data.get("dia_diem_thuc_hien"),
+
+            data.get("ket_qua_check_vo_ngoai"),
+            data.get("ket_qua_check_do_on_dinh_chi_so"),
+            data.get("ket_qua_check_do_kin"),
+
+            data.get("du_lieu_kiem_dinh"),
+            data.get("nguoi_soat_lai"),
+
+            _parse_date(data.get("hieu_luc_bien_ban")),
+            data.get("last_updated"),
+
+            data.get("noi_su_dung"),
+            data.get("ten_khach_hang"),
+            data.get("created_by")
+        )
+
+
+        excel_buffer, fileName = _create_sample_bb_excel_buffer_file(dongho, True)
+        if not excel_buffer:
+            return jsonify({"msg": "Có lỗi xảy ra khi tạo file!"}), 500
+
+        pdf_buffer, pdf_filename = process_excel_bytesio_to_pdf(excel_buffer, fileName)
+        if not pdf_buffer:
+            return jsonify({"msg": "Có lỗi xảy ra khi tạo file!"}), 500
+
+        return send_file(
+            pdf_buffer,
+            as_attachment=False,
+            download_name=pdf_filename,
+            mimetype="application/pdf"
+        )
+
+    except NotFound:
+        return jsonify({"msg": "Không tìm thấy đồng hồ!"}), 404
+    except Exception as e:
+        print("Lỗi preview BB:", str(e))
+        traceback.print_exc()
+        return jsonify({"msg": f"Đã có lỗi xảy ra: {str(e)}"}), 500
+
+
+def _create_sample_gcn_excel_buffer_file(dongho: DongHo, is_preview: bool = False):
+    row_heights = 0.69 #cm
+    try:
         dongho_dict = dongho.to_dict()
         if "du_lieu_kiem_dinh" in dongho_dict:
             try:
@@ -501,11 +589,11 @@ def get_gcn_kiem_dinh(id):
                     dongho_dict["du_lieu_kiem_dinh"]
                 )
             except json.JSONDecodeError as e:
-                return jsonify({"msg": "Có lỗi xảy ra khi trích xuất dữ liệu! Hãy thử lại"}), 400
-        if not dongho_dict['du_lieu_kiem_dinh']['ket_qua']:
-            return jsonify({"msg": "Đồng hồ không đạt tiêu chuẩn xuất biên bản!"}), 422
-        
-        # TODO: ten_khach_hang
+                print("Error decoding JSON: ", str(e))
+                return None, None
+        if dongho_dict['du_lieu_kiem_dinh']['ket_qua'] is None:
+            print(">>> Không có dữ liệu kiểm định!")
+            return None, None
 
         fileName = (
             "KĐ_GCN"
@@ -525,7 +613,8 @@ def get_gcn_kiem_dinh(id):
             os.makedirs(gcn_directory)
 
         if not os.path.exists(gcn_file_path):
-            src_file = "files/GCN_ExcelForm.xlsm"
+            suffix = "Preview" if is_preview else "ExcelForm"
+            src_file = f"files/GCN_{suffix}.xlsm"
             workbook = openpyxl.load_workbook(src_file)
             sheet = workbook.active
 
@@ -564,30 +653,161 @@ def get_gcn_kiem_dinh(id):
             sheet[f"A43"] = str(dongho.nguoi_thuc_hien).upper() if dongho.nguoi_thuc_hien else ""
 
 
-            # desired_height = row_heights * 28.35
-            # # Run from row: 2
-            # for row in range(2, sheet.max_row + 1):
-            #     sheet.row_dimensions[row].height = desired_height
-
+            # Tạo một đối tượng BytesIO để lưu workbook
             excel_buffer = BytesIO()
             workbook.save(excel_buffer)
             excel_buffer.seek(0)
 
             workbook.close()
-        
-        # Trả về file từ bộ nhớ thay vì lưu file vào hệ thống
+            return excel_buffer, fileName
+    
+    except Exception as e:
+        print("Error creating sample BB Excel file: ", str(e))
+        traceback.print_exc()
+        return None, None
+  
+@download_bp.route("/kiemdinh/gcn/<string:id>", methods=["GET"])
+def get_excel_gcn_kiem_dinh(id):
+    try:
+        decoded_id = decode(id)
+        dongho = DongHo.query.filter_by(id=decoded_id).first_or_404()
+        excel_buffer, fileName = _create_sample_gcn_excel_buffer_file(dongho)
+
+        if not excel_buffer:
+            return jsonify({"msg": "Có lỗi xảy ra khi tạo file!"}), 500
+
+        # Trả về file từ bộ nhớ
         return send_file(
             excel_buffer, 
             as_attachment=True, 
             download_name=fileName, 
             mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
         )
-        # return send_file(f"../{gcn_file_path}", as_attachment=True, download_name=fileName, mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+        # return send_file(f"../{bb_file_path}", as_attachment=True, download_name=fileName, mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
     except NotFound:
         return jsonify({"msg": "Id không hợp lệ!"}), 404
     except Exception as e:
-        print("GCN: " + str(e))
         return jsonify({"msg": f"Đã có lỗi xảy ra: {str(e)}"}), 500
+
+@download_bp.route("/kiemdinh/gcn/pdf/<string:id>", methods=["GET"])
+def get_pdf_gcn_kiem_dinh(id):
+    try:
+        decoded_id = decode(id)
+        dongho = DongHo.query.filter_by(id=decoded_id).first_or_404()
+        excel_buffer, fileName = _create_sample_gcn_excel_buffer_file(dongho)
+
+        if not excel_buffer:
+            return jsonify({"msg": "Có lỗi xảy ra khi tạo file!"}), 500
+
+        pdf_buffer, pdf_filename = process_excel_bytesio_to_pdf(excel_buffer, fileName)
+        
+        if not pdf_buffer:
+            return jsonify({"msg": "Có lỗi xảy ra khi tạo file!"}), 500
+
+        # Trả về file từ bộ nhớ
+        return send_file(
+            pdf_buffer, 
+            as_attachment=True, 
+            download_name=fileName, 
+            mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        )
+        # return send_file(f"../{bb_file_path}", as_attachment=True, download_name=fileName, mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+    except NotFound:
+        return jsonify({"msg": "Id không hợp lệ!"}), 404
+    except Exception as e:
+        print("BB: " + str(e))
+        return jsonify({"msg": f"Đã có lỗi xảy ra: {str(e)}"}), 500
+
+@download_bp.route("/kiemdinh/gcn/preview/pdf", methods=["POST"])
+def preview_pdf_gcn_kiem_dinh():
+    try:
+        data = request.get_json()
+
+        if not data:
+            return jsonify({"msg": "Thiếu thông tin đồng hồ!"}), 400
+
+        # OPTIONAL: Nếu cần decode id:
+        # decoded_id = decode(dongho_data["id"])
+
+        # Tùy vào cấu trúc `dongho_data`, có thể tạo instance tạm:
+        dongho = DongHo(
+            data.get("ten_phuong_tien_do"),
+            data.get("is_hieu_chuan"),
+            data.get("index"),
+            data.get("group_id"),
+
+            data.get("sensor"),
+            data.get("transitor"),
+            data.get("serial"),
+
+            data.get("co_so_san_xuat"),
+            _parse_date(data.get("nam_san_xuat")),
+
+            data.get("dn"),
+            data.get("d"),
+            data.get("ccx"),
+            data.get("q3"),
+            data.get("r"),
+            data.get("qn"),
+            data.get("k_factor"),
+            data.get("so_qd_pdm"),
+
+            data.get("so_tem"),
+            data.get("so_giay_chung_nhan"),
+
+            data.get("co_so_su_dung"),
+            data.get("phuong_phap_thuc_hien"),
+            data.get("chuan_thiet_bi_su_dung"),
+            data.get("nguoi_thuc_hien"),
+            _parse_date(data.get("ngay_thuc_hien")),
+
+            data.get("dia_diem_thuc_hien"),
+
+            data.get("ket_qua_check_vo_ngoai"),
+            data.get("ket_qua_check_do_on_dinh_chi_so"),
+            data.get("ket_qua_check_do_kin"),
+
+            data.get("du_lieu_kiem_dinh"),
+            data.get("nguoi_soat_lai"),
+
+            _parse_date(data.get("hieu_luc_bien_ban")),
+            data.get("last_updated"),
+
+            data.get("noi_su_dung"),
+            data.get("ten_khach_hang"),
+            data.get("created_by")
+        )
+
+
+        excel_buffer, fileName = _create_sample_gcn_excel_buffer_file(dongho, True)
+        if not excel_buffer:
+            return jsonify({"msg": "Có lỗi xảy ra khi tạo file!"}), 500
+
+        pdf_buffer, pdf_filename = process_excel_bytesio_to_pdf(excel_buffer, fileName)
+        if not pdf_buffer:
+            return jsonify({"msg": "Có lỗi xảy ra khi tạo file!"}), 500
+
+        return send_file(
+            pdf_buffer,
+            as_attachment=False,
+            download_name=pdf_filename,
+            mimetype="application/pdf"
+        )
+
+    except NotFound:
+        return jsonify({"msg": "Không tìm thấy đồng hồ!"}), 404
+    except Exception as e:
+        print("Lỗi preview BB:", str(e))
+        traceback.print_exc()
+        return jsonify({"msg": f"Đã có lỗi xảy ra: {str(e)}"}), 500
+
+
+
+
+
+
+
+
 
 @download_bp.route("/kiemdinh/hc/<string:id>", methods=["GET"])
 def get_hieu_chuan(id):
@@ -623,7 +843,8 @@ def get_hieu_chuan(id):
             os.makedirs(hc_directory)
 
         if not os.path.exists(hc_file_path):
-            src_file = "files/HC_ExcelForm.xlsm"
+            suffix = "Preview" if is_preview else "ExcelForm"
+            src_file = f"files/HC_{suffix}.xlsm"
             workbook = openpyxl.load_workbook(src_file)
             sheet = workbook.active
             so_giay = f"FMS.HC.{dongho.so_giay_chung_nhan}.{dongho.ngay_thuc_hien.strftime('%y')}" if dongho.so_giay_chung_nhan and dongho.ngay_thuc_hien else ""

@@ -8,9 +8,9 @@ from app.utils.url_encrypt import encode, decode
 from flask_jwt_extended import create_access_token, decode_token
 
 class Permission:
-    VIEW = 1
-    MANAGE = 2
-    DIRECTOR = 3
+    USER = 1
+    KIEM_DINH_VIEN = 2
+    MANAGE = 3
     ADMIN = 4
     SUPERADMIN = 5
 
@@ -25,8 +25,7 @@ class Role(db.Model):
     def __init__(self, **kwargs):
         super(Role, self).__init__(**kwargs)
         if self.permissions is None:
-            self.permissions = Permission.VIEW
-
+            self.permissions = Permission.USER
 
 class User(UserMixin, db.Model):
     __tablename__ = "user"
@@ -37,6 +36,7 @@ class User(UserMixin, db.Model):
     password_hash = db.Column(db.String(256), nullable=False)
     role_id = db.Column(db.Integer, db.ForeignKey("roles.id"))
     confirmed = db.Column(db.Boolean, default=False)
+    phong_ban_id = db.Column(db.Integer, db.ForeignKey("phongban.id"), index=True)
 
     def __init__(self, **kwargs):
         super(User, self).__init__(**kwargs)
@@ -244,6 +244,9 @@ class DongHo(db.Model):
     # Define the relationship to the User model
     # user = db.relationship("User", foreign_keys=[owner_id], backref="user_dongho")
 
+    created_by = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False, index=True)
+    creator = db.relationship("User", backref="donghos_created")
+
     def __init__(
         self,
         ten_phuong_tien_do,
@@ -290,6 +293,7 @@ class DongHo(db.Model):
 
         noi_su_dung,
         ten_khach_hang,
+        created_by
         # vi_tri,
         # nhiet_do,
         # do_am,
@@ -337,6 +341,7 @@ class DongHo(db.Model):
 
         self.noi_su_dung = noi_su_dung
         self.ten_khach_hang = ten_khach_hang
+        self.created_by = created_by
 
         # self.vi_tri = vi_tri
         # self.nhiet_do = nhiet_do
@@ -397,79 +402,58 @@ class DongHo(db.Model):
             # "owner": None if not self.user else self.user.to_dict()
         }
 
+class PhongBan(db.Model):
+    __tablename__ = "phongban"
 
-class NhomDongHoPayment(db.Model):
-    __tablename__ = "nhomdongho_payment"
     id = db.Column(db.Integer, primary_key=True)
-    group_id = db.Column(db.String(50), nullable=False)
-    is_paid = db.Column(db.Boolean, default=False, nullable=False)
-    paid_date = db.Column(db.DateTime, nullable=True)
-    payment_collector = db.Column(db.String(50), nullable=True)
-    last_updated = db.Column(db.Text, nullable=True)
+    ten_phong = db.Column(db.String(100), nullable=False)
 
-    def __init__(
-        self,
-        group_id,
-        is_paid=False,
-        paid_date=None,
-        payment_collector=None,
-        last_updated=None,
-    ):
-        self.group_id = group_id
-        self.is_paid = is_paid
-        self.paid_date = paid_date
-        self.payment_collector = payment_collector
-        self.last_updated = last_updated
+    truong_phong_username = db.Column(db.String(64), db.ForeignKey("user.username"), index=True)
+
+    ngay_tao = db.Column(db.DateTime, default=datetime.utcnow)
+
+    members = db.relationship("User", backref="phong_ban", primaryjoin="PhongBan.id==User.phong_ban_id")
+
+    truong_phong = db.relationship("User", foreign_keys=[truong_phong_username], backref="phong_ban_quan_ly")
+
+    def __init__(self, ten_phong, truong_phong_username=None):
+        self.ten_phong = ten_phong
+        self.truong_phong_username = truong_phong_username
+
+    def is_manager(self, user):
+        if user.username == self.truong_phong_username:
+            return True
+        return False
 
     def to_dict(self):
         return {
-            "id": encode(self.id),
-            "group_id": self.group_id,
-            "is_paid": self.is_paid,
-            "paid_date": self.paid_date,
-            "payment_collector": self.payment_collector,
-            "last_updated": self.last_updated,
+            "id": self.id,
+            "ten_phong_ban": self.ten_phong,
+            "truong_phong_username": self.truong_phong_username,
+            "truong_phong": self.truong_phong.to_dict() if self.truong_phong else None,
+            "members": [
+                user.to_dict() for user in self.members
+                if user.username != self.truong_phong_username
+            ],
+            "ngay_tao": self.ngay_tao.isoformat() if self.ngay_tao else None,
+            "dong_hos": [
+                dong_ho.to_dict()
+                for user in self.members
+                if user.username != self.truong_phong_username
+                for dong_ho in user.donghos_created
+            ],
         }
 
+# class OTP(db.Model):
+#     __tablename__ = 'otp'
+#     id = db.Column(db.Integer, primary_key=True)
+#     user_id = db.Column(db.Integer, db.ForeignKey("user.id"))
+#     otp_code = db.Column(db.String(6))
+#     purpose = db.Column(db.String(64), nullable=False)  # forgot_password, reset_email, reset_password
+#     created_at = db.Column(db.DateTime, nullable=False, default=datetime.now)
+#     expired_at = db.Column(db.DateTime, nullable=False)
 
-class DongHoPermissions(db.Model):
-    __tablename__ = "dongho_permissions"
-    id = db.Column(db.Integer, primary_key=True)
-    dongho_id = db.Column(db.Integer, db.ForeignKey("dongho.id"), index=True)
-    username = db.Column(db.String(64), db.ForeignKey("user.username"), index=True)
-    role_id = db.Column(db.Integer, db.ForeignKey("roles.id"))
-    manager = db.Column(db.String(64), db.ForeignKey("user.username"), index=True)
-
-    dongho = db.relationship("DongHo", foreign_keys=[dongho_id], backref="dongho_permissions")
-    user = db.relationship("User", foreign_keys=[username], backref="user_permissions")
-    mng = db.relationship("User", foreign_keys=[manager], backref="manager_permissions")
-    role = db.relationship("Role", foreign_keys=[role_id], backref="role_permissions")
-
-    def __init__(self, dongho_id, username,manager, role_id):
-        self.dongho_id = dongho_id
-        self.username = username
-        self.manager = manager
-        self.role_id = role_id
-
-    def to_dict(self):
-        return {
-            "id": encode(self.id),
-            "dongho":  None if not self.dongho else self.dongho.to_dict(),
-            "user":  None if not self.user else self.user.to_dict(),
-            "manager":  None if not self.mng else self.mng.to_dict(),
-            "role":  None if not self.role else self.role.name,
-        }
-
-class OTP(db.Model):
-    __tablename__ = 'otp'
-    id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.Integer, db.ForeignKey("user.id"))
-    otp_code = db.Column(db.String(6))
-    purpose = db.Column(db.String(64), nullable=False)  # forgot_password, reset_email, reset_password
-    created_at = db.Column(db.DateTime, nullable=False, default=datetime.now)
-    expired_at = db.Column(db.DateTime, nullable=False)
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        if not self.expired_at:  # Nếu expired_at chưa có, đặt nó = created_at + 5 phút
-            self.expired_at = self.created_at + timedelta(minutes=5)
+#     def __init__(self, *args, **kwargs):
+#         super().__init__(*args, **kwargs)
+#         if not self.expired_at:  # Nếu expired_at chưa có, đặt nó = created_at + 5 phút
+#             self.expired_at = self.created_at + timedelta(minutes=5)

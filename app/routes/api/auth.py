@@ -1,7 +1,9 @@
+# -*- coding: utf-8 -*-
 import os
 import re
 from datetime import datetime
 from flask import Blueprint, jsonify, request, session
+import traceback  # để ghi lại chi tiết lỗi nếu cần
 
 from flask_jwt_extended import (
     JWTManager,
@@ -33,92 +35,107 @@ def load_user(user_id):
 
 @auth_bp.route("/register", methods=["POST"])
 def register():
-    data = request.get_json()
-    username = data.get("username")
-    fullname = data.get("fullname")
-    password = data.get("password")
-    email = data.get("email")
+    try:
+        data = request.get_json()
+        username = data.get("username")
+        fullname = data.get("fullname")
+        password = data.get("password")
+        email = data.get("email")
 
-    if User.query.filter_by(username=username).first():
-        return jsonify({"msg": "Người dùng đã tồn tại"}), 400
-    if User.query.filter_by(email=email).first():
-        return jsonify({"msg": "Email đã tồn tại"}), 400
+        if User.query.filter_by(username=username).first():
+            return jsonify({"msg": "Nguoi dung da ton tai"}), 400
+        if User.query.filter_by(email=email).first():
+            return jsonify({"msg": "Email đã tồn tại"}), 400
 
-    new_user = User(username=username, fullname=fullname, email=email)
-    new_user.set_password(password)
+        new_user = User(username=username, fullname=fullname, email=email)
+        new_user.set_password(password)
 
-    db.session.add(new_user)
-    db.session.commit()
+        db.session.add(new_user)
+        db.session.commit()
 
-    login_user(new_user)
-    session["current_user"] = new_user.to_dict()
+        login_user(new_user)
+        session["current_user"] = new_user.to_dict()
 
-    access_token = create_access_token(
-        identity=new_user.to_dict(),
-        expires_delta=timedelta(minutes=int(os.environ.get("EXPIRE_TIME_ACT"))),
-    )
-    refresh_token = create_refresh_token(
-        identity=new_user.to_dict(),
-        expires_delta=timedelta(days=int(os.environ.get("EXPIRE_TIME_RFT"))),
-    )
-    return (
-        jsonify(
-            access_token=access_token,
-            refresh_token=refresh_token,
-            user=new_user.to_dict(),
-            msg="Đăng ký thành công!",
-        ),
-        201,
-    )
-
-
-@auth_bp.route("/login", methods=["POST"])
-def login():
-    data = request.get_json()
-    username = data.get("username")
-    password = data.get("password")
-
-    # user = User.query.filter_by(username=username).first()
-    # Check if the username is an email
-    if re.match(r"[^@]+@[^@]+\.[^@]+", username):
-        user = User.query.filter_by(email=username).first()
-    else:
-        user = User.query.filter_by(username=username).first()
-    if user and user.check_password(password):
-        login_user(user)
-        session["current_user"] = user.to_dict()
         access_token = create_access_token(
-            identity=user.to_dict(),
+            identity=new_user.to_dict(),
             expires_delta=timedelta(minutes=int(os.environ.get("EXPIRE_TIME_ACT"))),
         )
         refresh_token = create_refresh_token(
-            identity=user.to_dict(),
+            identity=new_user.to_dict(),
             expires_delta=timedelta(days=int(os.environ.get("EXPIRE_TIME_RFT"))),
         )
         return (
             jsonify(
                 access_token=access_token,
                 refresh_token=refresh_token,
-                user=user.to_dict(),
-                msg="Đăng nhập thành công!",
+                user=new_user.to_dict(),
+                msg="Đăng ký thành công!",
             ),
-            200,
+            201,
         )
-    return jsonify({"msg": "Bad username or password"}), 401
+    except Exception as e:
+        print(f"Đăng ký thất bại: {e}")
+        db.session.rollback()
+        return jsonify({"msg": "Lỗi trong quá trình đăng ký.", "error": str(e)}), 500
+
+
+@auth_bp.route("/login", methods=["POST"])
+def login():
+    try: 
+        data = request.get_json()
+        username = data.get("username")
+        password = data.get("password")
+
+        # user = User.query.filter_by(username=username).first()
+        # Check if the username is an email
+        if re.match(r"[^@]+@[^@]+\.[^@]+", username):
+            user = User.query.filter_by(email=username).first()
+        else:
+            user = User.query.filter_by(username=username).first()
+        if user and user.check_password(password):
+            login_user(user)
+            session["current_user"] = user.to_dict()
+            access_token = create_access_token(
+                identity=user.to_dict(),
+                expires_delta=timedelta(minutes=int(os.environ.get("EXPIRE_TIME_ACT"))),
+            )
+            refresh_token = create_refresh_token(
+                identity=user.to_dict(),
+                expires_delta=timedelta(days=int(os.environ.get("EXPIRE_TIME_RFT"))),
+            )
+            return (
+                jsonify(
+                    access_token=access_token,
+                    refresh_token=refresh_token,
+                    user=user.to_dict(),
+                    msg="Đăng nhập thành công!",
+                ),
+                200,
+            )
+        return jsonify({"msg": "Bad username or password"}), 401
+    except Exception as e:
+        print(f"Đăng nhập thất bại: {e}")
+        db.session.rollback()
+        return jsonify({"msg": "Lỗi trong quá trình đăng nhập.", "error": str(e)}), 500
 
 
 @auth_bp.route("/refresh", methods=["POST"])
 @jwt_required(refresh=True)
 def refresh():
-    identity = get_jwt_identity()
-    user = User.query.filter_by(username=identity["username"]).first()
-    if user:
-        access_token = create_access_token(
-            identity=user.to_dict(),
-            expires_delta=timedelta(minutes=int(os.environ.get("EXPIRE_TIME_ACT"))),
-        )
-        return jsonify(access_token=access_token, user=user.to_dict()), 200
-    return jsonify({"msg": "User not found"}), 404
+    try:
+        identity = get_jwt_identity()
+        user = User.query.filter_by(username=identity["username"]).first()
+        if user:
+            access_token = create_access_token(
+                identity=user.to_dict(),
+                expires_delta=timedelta(minutes=int(os.environ.get("EXPIRE_TIME_ACT"))),
+            )
+            return jsonify(access_token=access_token, user=user.to_dict()), 200
+        return jsonify({"msg": "Không tìm thấy người dùng!"}), 404
+    except Exception as e:
+        print(f"Lỗi refresh token: {e}")
+        return jsonify({"msg": "Lỗi khi làm mới token.", "error": str(e)}), 500
+
 
 
 @auth_bp.route("/logout", methods=["POST"])
@@ -143,15 +160,11 @@ def logout():
 
 
 @auth_bp.route("/me", methods=["GET"])
-# @jwt_required()
-@login_required
+@jwt_required()
 def profile():
-    # get user from jwt
-    username = None
-
     try:
-        username = current_user.username
-        user = User.query.filter_by(username=username).first()
+        identity = get_jwt_identity()
+        user = User.query.filter_by(username=identity["username"]).first()
         if not user:
             return jsonify({"msg": "Không tìm thấy người dùng!"}), 404
         return jsonify(user.to_dict()), 200
@@ -173,6 +186,7 @@ def send_password_reset_mail():
             return jsonify({"msg": "Gửi email thành công!", "status": 200}), 200
         except Exception as mail_err:
             print(mail_err)
+            traceback.print_exc()
             return (
                 jsonify({"msg": f"Đã có lỗi xảy ra! Hãy thử lại sau.", "status": 500}),
                 500,
@@ -191,6 +205,8 @@ def send_verify_mail():
             return jsonify({"msg": "Gửi email thành công!", "status": 200}), 200
         except Exception as mail_err:
             print(mail_err)
+            traceback.print_exc()
+
             return (
                 jsonify({"msg": f"Đã có lỗi xảy ra! Hãy thử lại sau.", "status": 500}),
                 500,
@@ -199,46 +215,52 @@ def send_verify_mail():
 @auth_bp.route("/change/email", methods=["POST"])
 @jwt_required()
 def reset_email():
-    data = request.get_json()
-    email = data.get("email")
-    password = data.get("password")
+    try: 
+        data = request.get_json()
+        email = data.get("email")
+        password = data.get("password")
 
-    # get user from jwt
-    current_user_identity = get_jwt_identity()
+        # get user from jwt
+        current_user_identity = get_jwt_identity()
 
-    user = User.query.filter_by(username=current_user_identity["username"]).first()
-    if not user:
-        return jsonify({"msg": "Không tìm thấy người dùng!"}), 404
+        user = User.query.filter_by(username=current_user_identity["username"]).first()
+        if not user:
+            return jsonify({"msg": "Không tìm thấy người dùng!"}), 404
 
-    # check email exists
-    if User.query.filter_by(email=email).first():
-        return jsonify({"msg": "Email đã tồn tại!"}), 400
+        # check email exists
+        if User.query.filter_by(email=email).first():
+            return jsonify({"msg": "Email đã tồn tại!"}), 400
 
-    # check current password
-    if not user.check_password(password):
-        return jsonify({"msg": "Mật khẩu không chính xác!"}), 401
+        # check current password
+        if not user.check_password(password):
+            return jsonify({"msg": "Mật khẩu không chính xác!"}), 401
 
-    # set new password
-    user.set_email(email)
-    db.session.commit()
+        # set new password
+        user.set_email(email)
+        db.session.commit()
 
-    access_token = create_access_token(
-        identity=user.to_dict(),
-        expires_delta=timedelta(minutes=int(os.environ.get("EXPIRE_TIME_ACT"))),
-    )
-    refresh_token = create_refresh_token(
-        identity=user.to_dict(),
-        expires_delta=timedelta(days=int(os.environ.get("EXPIRE_TIME_RFT"))),
-    )
-    return (
-        jsonify(
-            access_token=access_token,
-            refresh_token=refresh_token,
-            user=user.to_dict(),
-            msg="Đổi email thành công!",
-        ),
-        200,
-    )
+        access_token = create_access_token(
+            identity=user.to_dict(),
+            expires_delta=timedelta(minutes=int(os.environ.get("EXPIRE_TIME_ACT"))),
+        )
+        refresh_token = create_refresh_token(
+            identity=user.to_dict(),
+            expires_delta=timedelta(days=int(os.environ.get("EXPIRE_TIME_RFT"))),
+        )
+        return (
+            jsonify(
+                access_token=access_token,
+                refresh_token=refresh_token,
+                user=user.to_dict(),
+                msg="Đổi email thành công!",
+            ),
+            200,
+        )
+    
+    except Exception as e:
+        print(f"Reset thất bại: {e}")
+        db.session.rollback()
+        return jsonify({"msg": "Lỗi trong quá trình reset email.", "error": str(e)}), 500
 
 @auth_bp.route("/reset/password", methods=["POST"])
 @jwt_required()
