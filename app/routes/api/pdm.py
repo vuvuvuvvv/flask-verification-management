@@ -95,7 +95,7 @@ def create_pdm():
     new_pdm = PDM(
         ma_tim_dong_ho_pdm=data.get("ma_tim_dong_ho_pdm"),
         ten_dong_ho=data.get("ten_dong_ho"),
-        noi_san_xuat=data.get("noi_san_xuat"),
+        co_so_san_xuat=data.get("co_so_san_xuat"),
         dn=data.get("dn"),
         ccx=data.get("ccx"),
         sensor=data.get("sensor"),
@@ -125,7 +125,7 @@ def update_pdm():
         if existing_pdm:
             existing_pdm.ma_tim_dong_ho_pdm = data.get("ma_tim_dong_ho_pdm")
             existing_pdm.ten_dong_ho = data.get("ten_dong_ho")
-            existing_pdm.noi_san_xuat = data.get("noi_san_xuat")
+            existing_pdm.co_so_san_xuat = data.get("co_so_san_xuat")
             existing_pdm.dn = data.get("dn")
             existing_pdm.ccx = data.get("ccx")
             existing_pdm.sensor = data.get("sensor")
@@ -146,7 +146,7 @@ def update_pdm():
             new_pdm = PDM(
                 ma_tim_dong_ho_pdm=data.get("ma_tim_dong_ho_pdm"),
                 ten_dong_ho=data.get("ten_dong_ho"),
-                noi_san_xuat=data.get("noi_san_xuat"),
+                co_so_san_xuat=data.get("co_so_san_xuat"),
                 dn=data.get("dn"),
                 ccx=data.get("ccx"),
                 sensor=data.get("sensor"),

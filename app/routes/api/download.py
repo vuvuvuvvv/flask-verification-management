@@ -552,7 +552,10 @@ def preview_pdf_bb_kiem_dinh():
 
             data.get("noi_su_dung"),
             data.get("ten_khach_hang"),
-            data.get("created_by")
+            data.get("created_by"),
+            data.get("nhiet_do"),
+            data.get("do_am"),
+            data.get("ma_quan_ly"),
         )
 
 
@@ -775,7 +778,10 @@ def preview_pdf_gcn_kiem_dinh():
 
             data.get("noi_su_dung"),
             data.get("ten_khach_hang"),
-            data.get("created_by")
+            data.get("created_by"),
+            data.get("nhiet_do"),
+            data.get("do_am"),
+            data.get("ma_quan_ly"),
         )
 
 
@@ -808,14 +814,9 @@ def preview_pdf_gcn_kiem_dinh():
 
 
 
-
-@download_bp.route("/kiemdinh/hc/<string:id>", methods=["GET"])
-def get_hieu_chuan(id):
+def _create_sample_hc_excel_buffer_file(dongho: DongHo, is_preview: bool = False):
     row_heights = 0.69 #cm
-
     try:
-        decoded_id = decode(id)
-        dongho = DongHo.query.filter_by(id=decoded_id).first_or_404()
         dongho_dict = dongho.to_dict()
         if "du_lieu_kiem_dinh" in dongho_dict:
             try:
@@ -878,7 +879,8 @@ def get_hieu_chuan(id):
             sheet[f"O19"] = f"Hệ số K: {dongho.k_factor}" if dongho.k_factor else ""
 
             sheet[f"H20"] = dongho.co_so_su_dung if dongho.co_so_su_dung else ""
-            sheet[f"H21"] = dongho.vi_tri if dongho.vi_tri else ""           
+            # TODO: check vitri
+            # sheet[f"H21"] = dongho.vi_tri if dongho.vi_tri else ""           
             sheet[f"H22"] = "" 
 
             sheet[f"L23"] = dongho.phuong_phap_thuc_hien if dongho.phuong_phap_thuc_hien else ""
@@ -916,23 +918,289 @@ def get_hieu_chuan(id):
             for row in range(2, sheet.max_row + 1):
                 sheet.row_dimensions[row].height = desired_height
 
+            # Tạo một đối tượng BytesIO để lưu workbook
             excel_buffer = BytesIO()
             workbook.save(excel_buffer)
             excel_buffer.seek(0)
 
             workbook.close()
-        
-        # Trả về file từ bộ nhớ thay vì lưu file vào hệ thống
+            return excel_buffer, fileName
+    
+    except Exception as e:
+        print("Error creating sample BB Excel file: ", str(e))
+        traceback.print_exc()
+        return None, None
+  
+@download_bp.route("/hieuchuan/<string:id>", methods=["GET"])
+def get_excel_hc_kiem_dinh(id):
+    try:
+        decoded_id = decode(id)
+        dongho = DongHo.query.filter_by(id=decoded_id).first_or_404()
+        excel_buffer, fileName = _create_sample_hc_excel_buffer_file(dongho)
+
+        if not excel_buffer:
+            return jsonify({"msg": "Có lỗi xảy ra khi tạo file!"}), 500
+
+        # Trả về file từ bộ nhớ
         return send_file(
             excel_buffer, 
             as_attachment=True, 
             download_name=fileName, 
             mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
         )
-        # return send_file(f"../{hc_file_path}", as_attachment=True, download_name=fileName, mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+        # return send_file(f"../{bb_file_path}", as_attachment=True, download_name=fileName, mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
     except NotFound:
         return jsonify({"msg": "Id không hợp lệ!"}), 404
     except Exception as e:
-        print("HC: " + str(e))
         return jsonify({"msg": f"Đã có lỗi xảy ra: {str(e)}"}), 500
+
+@download_bp.route("/hieuchuan/pdf/<string:id>", methods=["GET"])
+def get_pdf_hc_kiem_dinh(id):
+    try:
+        decoded_id = decode(id)
+        dongho = DongHo.query.filter_by(id=decoded_id).first_or_404()
+        excel_buffer, fileName = _create_sample_hc_excel_buffer_file(dongho)
+
+        if not excel_buffer:
+            return jsonify({"msg": "Có lỗi xảy ra khi tạo file!"}), 500
+
+        pdf_buffer, pdf_filename = process_excel_bytesio_to_pdf(excel_buffer, fileName)
+        
+        if not pdf_buffer:
+            return jsonify({"msg": "Có lỗi xảy ra khi tạo file!"}), 500
+
+        # Trả về file từ bộ nhớ
+        return send_file(
+            pdf_buffer, 
+            as_attachment=True, 
+            download_name=fileName, 
+            mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        )
+        # return send_file(f"../{bb_file_path}", as_attachment=True, download_name=fileName, mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+    except NotFound:
+        return jsonify({"msg": "Id không hợp lệ!"}), 404
+    except Exception as e:
+        print("BB: " + str(e))
+        return jsonify({"msg": f"Đã có lỗi xảy ra: {str(e)}"}), 500
+
+@download_bp.route("/hieuchuan/preview/pdf", methods=["POST"])
+def preview_pdf_hc_kiem_dinh():
+    try:
+        data = request.get_json()
+
+        if not data:
+            return jsonify({"msg": "Thiếu thông tin đồng hồ!"}), 400
+
+        # OPTIONAL: Nếu cần decode id:
+        # decoded_id = decode(dongho_data["id"])
+
+        # Tùy vào cấu trúc `dongho_data`, có thể tạo instance tạm:
+        dongho = DongHo(
+            data.get("ten_phuong_tien_do"),
+            data.get("is_hieu_chuan"),
+            data.get("index"),
+            data.get("group_id"),
+
+            data.get("sensor"),
+            data.get("transitor"),
+            data.get("serial"),
+
+            data.get("co_so_san_xuat"),
+            _parse_date(data.get("nam_san_xuat")),
+
+            data.get("dn"),
+            data.get("d"),
+            data.get("ccx"),
+            data.get("q3"),
+            data.get("r"),
+            data.get("qn"),
+            data.get("k_factor"),
+            data.get("so_qd_pdm"),
+
+            data.get("so_tem"),
+            data.get("so_giay_chung_nhan"),
+
+            data.get("co_so_su_dung"),
+            data.get("phuong_phap_thuc_hien"),
+            data.get("chuan_thiet_bi_su_dung"),
+            data.get("nguoi_thuc_hien"),
+            _parse_date(data.get("ngay_thuc_hien")),
+
+            data.get("dia_diem_thuc_hien"),
+
+            data.get("ket_qua_check_vo_ngoai"),
+            data.get("ket_qua_check_do_on_dinh_chi_so"),
+            data.get("ket_qua_check_do_kin"),
+
+            data.get("du_lieu_kiem_dinh"),
+            data.get("nguoi_soat_lai"),
+
+            _parse_date(data.get("hieu_luc_bien_ban")),
+            data.get("last_updated"),
+
+            data.get("noi_su_dung"),
+            data.get("ten_khach_hang"),
+            data.get("created_by"),
+            data.get("nhiet_do"),
+            data.get("do_am"),
+            data.get("ma_quan_ly"),
+        )
+
+
+        excel_buffer, fileName = _create_sample_hc_excel_buffer_file(dongho, True)
+        if not excel_buffer:
+            return jsonify({"msg": "Có lỗi xảy ra khi tạo file!"}), 500
+
+        pdf_buffer, pdf_filename = process_excel_bytesio_to_pdf(excel_buffer, fileName)
+        if not pdf_buffer:
+            return jsonify({"msg": "Có lỗi xảy ra khi tạo file!"}), 500
+
+        return send_file(
+            pdf_buffer,
+            as_attachment=False,
+            download_name=pdf_filename,
+            mimetype="application/pdf"
+        )
+
+    except NotFound:
+        return jsonify({"msg": "Không tìm thấy đồng hồ!"}), 404
+    except Exception as e:
+        print("Lỗi preview BB:", str(e))
+        traceback.print_exc()
+        return jsonify({"msg": f"Đã có lỗi xảy ra: {str(e)}"}), 500
+
+
+
+
+
+
+
+
+
+# @download_bp.route("/kiemdinh/hc/<string:id>", methods=["GET"])
+# def get_hieu_chuan(id):
+#     row_heights = 0.69 #cm
+
+#     try:
+#         decoded_id = decode(id)
+#         dongho = DongHo.query.filter_by(id=decoded_id).first_or_404()
+#         dongho_dict = dongho.to_dict()
+#         if "du_lieu_kiem_dinh" in dongho_dict:
+#             try:
+#                 dongho_dict["du_lieu_kiem_dinh"] = json.loads(
+#                     dongho_dict["du_lieu_kiem_dinh"]
+#                 )
+#             except json.JSONDecodeError as e:
+#                 return jsonify({"msg": "Có lỗi xảy ra khi trích xuất dữ liệu! Hãy thử lại"}), 400
+        
+#         fileName = (
+#             "HC"
+#             + ("_" + dongho.so_giay_chung_nhan if dongho.so_giay_chung_nhan else "")
+#             + ("_" + dongho.ten_khach_hang if dongho.ten_khach_hang else "")
+#             # + ("_" + dongho.ten_dong_ho if dongho.ten_dong_ho else "")
+#             + ("_" + dongho.dn if dongho.dn else "")
+#             + ("_" + dongho.ngay_thuc_hien.strftime("%d-%m-%Y") if dongho.ngay_thuc_hien else "")
+#             + ".xlsx"
+#         )
+
+#         hc_file_path = f"files/export/HC/{fileName}"
+#         hc_directory = os.path.dirname(hc_file_path)
+
+#         # Ensure the directory exists
+#         if not os.path.exists(hc_directory):
+#             os.makedirs(hc_directory)
+
+#         if not os.path.exists(hc_file_path):
+#             suffix = "Preview" if is_preview else "ExcelForm"
+#             src_file = f"files/HC_{suffix}.xlsm"
+#             workbook = openpyxl.load_workbook(src_file)
+#             sheet = workbook.active
+#             so_giay = f"FMS.HC.{dongho.so_giay_chung_nhan}.{dongho.ngay_thuc_hien.strftime('%y')}" if dongho.so_giay_chung_nhan and dongho.ngay_thuc_hien else ""
+#             sheet[f"BL4"] = so_giay
+#             sheet[f"BB6"] = round(float(dongho.nhiet_do), 1) if isinstance(dongho.nhiet_do, (int, float)) else dongho.nhiet_do if dongho.nhiet_do else ""
+#             sheet[f"BJ6"] = round(float(dongho.do_am), 1) if isinstance(dongho.do_am, (int, float)) else dongho.do_am if dongho.do_am else ""
+
+#             sheet[f"Q8"] = so_giay
+#             sheet[f"J10"] = dongho.ten_phuong_tien_do if dongho.ten_phuong_tien_do else ""
+
+#             sheet[f"H12"] = dongho.co_so_san_xuat if dongho.co_so_san_xuat else ""
+#             sheet[f"Z12"] = "Mã Quản lý:" if dongho.ma_quan_ly else ""
+#             sheet[f"AA12"] = dongho.ma_quan_ly if dongho.ma_quan_ly else ""
+            
+#             # sheet[f"H14"] = (f"Sensor: {dongho.sensor}" if dongho.transitor else dongho.sensor) if dongho.sensor else ""
+#             # sheet[f"H15"] = f"Chỉ thị: {dongho.transitor}" if dongho.transitor else ""
+
+#             # sheet[f"AA14"] = (f"Sensor: {dongho.seri_sensor}" if dongho.seri_chi_thi else dongho.seri_sensor) if dongho.seri_sensor else ""
+#             # sheet[f"AA15"] = f"Chỉ thị: {dongho.seri_chi_thi}" if dongho.seri_chi_thi else ""
+
+#             sheet[f"AA16"] = dongho.dn if dongho.dn else ""
+
+#             sheet[f"Y17"] = "Q3=" if dongho.q3 else "Qn="
+#             sheet[f"Z17"] = dongho.q3 if dongho.q3 else dongho.qn
+            
+#             sheet[f"N18"] = "-" if dongho.ccx else ""
+#             sheet[f"O18"] = f"Cấp chính xác: {dongho.ccx}" if dongho.ccx else ""
+#             sheet[f"X18"] = f"Tỷ số Q3/Q1: (R) = {dongho.r}" if dongho.r else ""
+
+#             sheet[f"N19"] = "-" if dongho.k_factor else ""
+#             sheet[f"O19"] = f"Hệ số K: {dongho.k_factor}" if dongho.k_factor else ""
+
+#             sheet[f"H20"] = dongho.co_so_su_dung if dongho.co_so_su_dung else ""
+#             sheet[f"H21"] = dongho.vi_tri if dongho.vi_tri else ""           
+#             sheet[f"H22"] = "" 
+
+#             sheet[f"L23"] = dongho.phuong_phap_thuc_hien if dongho.phuong_phap_thuc_hien else ""
+#             sheet[f"L24"] = PP_THUC_HIEN[dongho.phuong_phap_thuc_hien] if dongho.phuong_phap_thuc_hien else ""   
+
+#             sheet[f"K25"] = dongho.chuan_thiet_bi_su_dung if dongho.chuan_thiet_bi_su_dung else ""   
+
+#             sheet[f"F27"] = dongho.so_tem if dongho.so_tem else ""
+
+#             sheet[f"AB27"] = dongho.hieu_luc_bien_ban.strftime("%d/%m/%Y") if dongho.hieu_luc_bien_ban else ""
+
+#             sheet[f"R30"] = f"Hà Nội, ngày {dongho.ngay_thuc_hien.strftime('%d')} tháng {dongho.ngay_thuc_hien.strftime('%m')} năm {dongho.ngay_thuc_hien.strftime('%Y')}" if dongho.ngay_thuc_hien else ""
+#             sheet[f"B39"] = str(dongho.nguoi_thuc_hien).upper() if dongho.nguoi_thuc_hien else ""
+
+            
+#             du_lieu = dongho_dict['du_lieu_kiem_dinh']['du_lieu']
+#             hieu_sai_so = list(dongho_dict['du_lieu_kiem_dinh']['hieu_sai_so'])
+#             mf = list(dongho_dict['du_lieu_kiem_dinh']['mf'])
+#             titles = ["Q3","Q2","Q1"] if dongho.q3 else ['Qn', "Qt", "Qmin"] 
+
+#             sheet[f"AV11"] = du_lieu[titles[2]]['value'] if du_lieu[titles[2]]['value'] else "-"
+#             sheet[f"BA11"] = hieu_sai_so[2]['hss'] if hieu_sai_so[2]['hss'] != None or hieu_sai_so[2]['hss'] == 0  else "-" 
+#             sheet[f"BF11"] = mf[2]['mf'] if mf[2]['mf'] else "-" 
+
+#             sheet[f"AV13"] = du_lieu[titles[1]]['value'] if du_lieu[titles[1]]['value'] else "-"
+#             sheet[f"BA13"] = hieu_sai_so[1]['hss'] if hieu_sai_so[1]['hss'] != None or hieu_sai_so[1]['hss'] == 0  else "-" 
+#             sheet[f"BF13"] = mf[1]['mf'] if mf[1]['mf'] else "-" 
+
+#             sheet[f"AV15"] = du_lieu[titles[0]]['value'] if du_lieu[titles[0]]['value'] else "-"
+#             sheet[f"BA15"] = hieu_sai_so[0]['hss'] if hieu_sai_so[0]['hss'] != None or hieu_sai_so[0]['hss'] == 0  else "-" 
+#             sheet[f"BF15"] = mf[0]['mf'] if mf[0]['mf'] else "-" 
+
+#             desired_height = row_heights * 28.35
+#             # Run from row: 2
+#             for row in range(2, sheet.max_row + 1):
+#                 sheet.row_dimensions[row].height = desired_height
+
+#             excel_buffer = BytesIO()
+#             workbook.save(excel_buffer)
+#             excel_buffer.seek(0)
+
+#             workbook.close()
+        
+#         # Trả về file từ bộ nhớ thay vì lưu file vào hệ thống
+#         return send_file(
+#             excel_buffer, 
+#             as_attachment=True, 
+#             download_name=fileName, 
+#             mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+#         )
+#         # return send_file(f"../{hc_file_path}", as_attachment=True, download_name=fileName, mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+#     except NotFound:
+#         return jsonify({"msg": "Id không hợp lệ!"}), 404
+#     except Exception as e:
+#         print("HC: " + str(e))
+#         return jsonify({"msg": f"Đã có lỗi xảy ra: {str(e)}"}), 500
 

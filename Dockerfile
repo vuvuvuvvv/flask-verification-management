@@ -35,9 +35,9 @@ ENV PYTHONUNBUFFERED=1
 # Expose the port
 EXPOSE 5000
 
-
-# CMD script
+# CMD: chạy SSH server trước, rồi tiếp tục chờ Postgres và chạy Flask
 CMD ["sh", "-c", " \
+  service ssh start && \
   timeout=30; \
   while ! pg_isready -h postgres; do \
     >&2 echo 'Postgres is unavailable - sleeping'; \
@@ -50,8 +50,7 @@ CMD ["sh", "-c", " \
   done; \
   >&2 echo 'Postgres is up - executing command'; \
   if [ ! -d 'migrations/versions' ]; then \
-    flask db init && flask db migrate -m 'Initial migration'; \
+    flask db init && flask db migrate -m \"Initial migration\"; \
   fi; \
-  >&2 echo 'Postgres is up - executing command'; \
   flask db upgrade && python init_db/seed.py && flask run --host=0.0.0.0 \
 "]

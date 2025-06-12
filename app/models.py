@@ -114,7 +114,7 @@ class PDM(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     ma_tim_dong_ho_pdm = db.Column(db.String(255), nullable=True, index=True)
     ten_dong_ho = db.Column(db.String(255), nullable=False, index=True)
-    noi_san_xuat = db.Column(db.String(255), nullable=False)
+    co_so_san_xuat = db.Column(db.String(255), nullable=False)
     dn = db.Column(db.String(255), nullable=True)
     ccx = db.Column(db.String(255), nullable=True)
     kieu_sensor = db.Column(db.String(255), nullable=False)
@@ -133,7 +133,7 @@ class PDM(db.Model):
         self,
         ma_tim_dong_ho_pdm,
         ten_dong_ho,
-        noi_san_xuat,
+        co_so_san_xuat,
         dn,
         ccx,
         kieu_sensor,
@@ -150,7 +150,7 @@ class PDM(db.Model):
     ):
         self.ma_tim_dong_ho_pdm = ma_tim_dong_ho_pdm
         self.ten_dong_ho = ten_dong_ho
-        self.noi_san_xuat = noi_san_xuat
+        self.co_so_san_xuat = co_so_san_xuat
         self.dn = dn
         self.ccx = ccx
         self.kieu_sensor = kieu_sensor
@@ -170,7 +170,7 @@ class PDM(db.Model):
             "id": self.id,
             "ma_tim_dong_ho_pdm": self.ma_tim_dong_ho_pdm,
             "ten_dong_ho": self.ten_dong_ho,
-            "noi_san_xuat": self.noi_san_xuat,
+            "co_so_san_xuat": self.co_so_san_xuat,
             "dn": self.dn,
             "ccx": self.ccx,
             "kieu_sensor": self.kieu_sensor,
@@ -237,12 +237,13 @@ class DongHo(db.Model):
     noi_su_dung = db.Column(db.String(255), nullable=True)
     ten_khach_hang = db.Column(db.String(255), nullable=True)
     # vi_tri = db.Column(db.String(255), nullable=True)  # dia diem noi su dung
-    # nhiet_do = db.Column(db.String(255), nullable=True)
-    # do_am = db.Column(db.String(255), nullable=True)
+    nhiet_do = db.Column(db.String(255), nullable=True, default=None)
+    do_am = db.Column(db.String(255), nullable=True, default=None)
     # owner_id = db.Column(db.Integer, db.ForeignKey("user.id"), index=True)
 
     # Define the relationship to the User model
     # user = db.relationship("User", foreign_keys=[owner_id], backref="user_dongho")
+    ma_quan_ly = db.Column(db.String(255), nullable=True)
 
     created_by = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False, index=True)
     creator = db.relationship("User", backref="donghos_created")
@@ -293,10 +294,11 @@ class DongHo(db.Model):
 
         noi_su_dung,
         ten_khach_hang,
-        created_by
+        created_by,
         # vi_tri,
-        # nhiet_do,
-        # do_am,
+        nhiet_do,
+        do_am,
+        ma_quan_ly,
     ):
         self.ten_phuong_tien_do = ten_phuong_tien_do
         self.is_hieu_chuan = is_hieu_chuan
@@ -344,8 +346,9 @@ class DongHo(db.Model):
         self.created_by = created_by
 
         # self.vi_tri = vi_tri
-        # self.nhiet_do = nhiet_do
-        # self.do_am = do_am
+        self.nhiet_do = nhiet_do
+        self.do_am = do_am
+        self.ma_quan_ly = ma_quan_ly
 
         
 
@@ -397,8 +400,9 @@ class DongHo(db.Model):
             "noi_su_dung": self.noi_su_dung,
             "ten_khach_hang": self.ten_khach_hang,
             
-            # "nhiet_do": self.nhiet_do,
-            # "do_am": self.do_am,
+            "nhiet_do": self.nhiet_do,
+            "do_am": self.do_am,
+            "ma_quan_ly": self.ma_quan_ly,
             # "owner": None if not self.user else self.user.to_dict()
         }
 

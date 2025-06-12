@@ -645,6 +645,9 @@ def create_dongho():
             hieu_luc_bien_ban=hieu_luc_bien_ban,
             last_updated = json.dumps(history_entry),
             created_by=decoded_id,
+            nhiet_do=data.get("nhiet_do") if data.get("nhiet_do") is not None else None,
+            do_am=data.get("do_am") if data.get("do_am") is not None else None,
+            ma_quan_ly=data.get("ma_quan_ly") if data.get("ma_quan_ly") else None,
         )
 
         db.session.add(new_dongho)
@@ -823,6 +826,11 @@ def update_dongho(id):
         dongho.nguoi_soat_lai = data.get("nguoi_soat_lai")
 
         dongho.hieu_luc_bien_ban = hieu_luc_bien_ban
+
+        dongho.nhiet_do = data.get("nhiet_do") if data.get("nhiet_do") is not None else None
+        dongho.do_am = data.get("do_am") if data.get("do_am") is not None else None
+
+        dongho.ma_quan_ly = data.get("ma_quan_ly")
 
         # Store original values and update fields
         changed_fields = []
